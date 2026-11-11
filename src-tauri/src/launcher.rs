@@ -20,6 +20,7 @@ use crate::error::{Error, Result};
 use crate::game::{self, launch, GamePlan};
 use crate::net::{Download, Net, Progress};
 use crate::paths::Paths;
+use crate::settings::SettingsStore;
 use crate::sync::{PackSync, Report};
 
 const STATE_EVENT: &str = "launcher://state";
@@ -42,7 +43,14 @@ pub enum Phase {
     Ready,
     Launching,
     Playing { started_at_ms: u64 },
-    Error { message: String },
+    /// `crashed`: Minecraft itself closed with an error, so the game log is worth copying.
+    Error { message: String, crashed: bool },
+}
+
+impl Phase {
+    fn failed(error: &Error) -> Self {
+        Phase::Error { message: error.to_string(), crashed: matches!(error, Error::Crashed(_)) }
+    }
 }
 
 /// What the UI shows about the pack.
@@ -72,6 +80,8 @@ pub struct PackInfo {
     pub extra_mods: Vec<String>,
     /// Jars moved to mods-disabled because the pack doesn't allow extra mods.
     pub disabled_mods: Vec<String>,
+    /// Something worth knowing that isn't a problem, like "no beta release right now".
+    pub note: Option<String>,
 }
 
 impl PackInfo {
@@ -97,7 +107,8 @@ pub struct Launcher {
     paths: Paths,
     net: Net,
     sync: PackSync,
-    channel: String,
+    /// The channel the installed pack came from: beta when the player wants it and one is out.
+    channel: Mutex<String>,
     phase: Mutex<Phase>,
     pack: Mutex<PackInfo>,
     /// The installed pack. It decides the Minecraft, Fabric and Java versions.
@@ -109,6 +120,9 @@ pub struct Launcher {
     requested: AtomicBool,
     /// True from the moment the game starts until it exits.
     playing: AtomicBool,
+    /// A switch flipped (or Beta updates changed) after the last sync started, so it has to
+    /// run again. Whoever holds `work` when that happens catches up when it's done.
+    resync: AtomicBool,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -120,11 +134,12 @@ fn now_ms() -> u64 {
 }
 
 impl Launcher {
-    pub fn new(paths: Paths, net: Net, app_version: String) -> Self {
-        let channel = config::DEFAULT_CHANNEL.to_string();
+    pub fn new(paths: Paths, net: Net, app_version: String, beta: bool) -> Self {
         let sync = PackSync::new(paths.clone(), net.clone(), app_version);
         // Show the installed pack right away, before the server has answered.
-        let manifest = sync.installed(&channel);
+        let beta_pack = if beta { sync.installed(BETA) } else { None };
+        let channel = if beta_pack.is_some() { BETA } else { config::DEFAULT_CHANNEL }.to_string();
+        let manifest = beta_pack.or_else(|| sync.installed(config::DEFAULT_CHANNEL));
         let (checked_at_ms, mod_count) = sync.saved_status();
         let mut pack = PackInfo { configured: config::pack_base_url().is_some(), channel: channel.clone(), checked_at_ms, mod_count, ..Default::default() };
         pack.describe(manifest.as_deref());
@@ -132,7 +147,7 @@ impl Launcher {
             paths,
             net,
             sync,
-            channel,
+            channel: Mutex::new(channel),
             phase: Mutex::new(Phase::Checking),
             pack: Mutex::new(pack),
             manifest: Mutex::new(manifest),
@@ -140,6 +155,7 @@ impl Launcher {
             work: tokio::sync::Mutex::new(()),
             requested: AtomicBool::new(false),
             playing: AtomicBool::new(false),
+            resync: AtomicBool::new(false),
         }
     }
 
@@ -217,12 +233,16 @@ impl Launcher {
         Ok(plan)
     }
 
+    fn channel(&self) -> String {
+        lock(&self.channel).clone()
+    }
+
     /// While the game runs, files can't change: only notes that an update is waiting.
     async fn check_while_playing(&self, app: &AppHandle) {
         if lock(&self.pack).update_ready {
             return;
         }
-        if self.sync.peek(&self.channel).await {
+        if self.sync.peek(&self.channel()).await {
             tracing::info!("a pack update is ready; it applies when the game closes");
             self.update_pack(app, |pack| pack.update_ready = true);
         }
@@ -242,24 +262,42 @@ pub fn start(app: AppHandle) {
 
 async fn refresh(app: &AppHandle, startup: bool) {
     let launcher = app.state::<Launcher>();
-    if launcher.playing.load(Ordering::SeqCst) {
-        launcher.check_while_playing(app).await;
-        return;
-    }
-    // Something else is running (PLAY, an install, a repair): it syncs first anyway.
-    let Ok(_work) = launcher.work.try_lock() else { return };
-    let changed = match sync_pack(app, &launcher, false).await {
-        Ok(changed) => changed,
-        Err(error) => {
-            tracing::error!("pack sync failed: {error}");
-            launcher.update_pack(app, |pack| pack.problem = Some(format!("Update failed: {error}")));
-            true
+    let mut startup = startup;
+    loop {
+        if launcher.playing.load(Ordering::SeqCst) {
+            launcher.check_while_playing(app).await;
+            return;
         }
-    };
-    let showing_progress = matches!(launcher.current(), Phase::Checking | Phase::Syncing { .. });
-    if startup || changed || showing_progress {
-        let phase = game_phase(&launcher, startup).await;
-        launcher.set(app, phase);
+        {
+            // Something else is running (PLAY, an install, a repair, another sync): it syncs
+            // anyway, and catches up when it's done if a switch flipped meanwhile.
+            let Ok(_work) = launcher.work.try_lock() else { return };
+            let changed = match sync_pack(app, &launcher, false).await {
+                Ok(changed) => changed,
+                Err(error) => {
+                    tracing::error!("pack sync failed: {error}");
+                    launcher.update_pack(app, |pack| pack.problem = Some(format!("Update failed: {error}")));
+                    true
+                }
+            };
+            let showing_progress = matches!(launcher.current(), Phase::Checking | Phase::Syncing { .. });
+            if startup || changed || showing_progress {
+                let phase = game_phase(&launcher, startup).await;
+                launcher.set(app, phase);
+            }
+        }
+        // A switch flipped while that sync ran, so its own sync couldn't start: go again.
+        if !launcher.resync.load(Ordering::SeqCst) {
+            return;
+        }
+        startup = false;
+    }
+}
+
+/// After PLAY or Repair let go of the lock: a switch that flipped while they ran applies now.
+async fn catch_up(app: &AppHandle) {
+    if app.state::<Launcher>().resync.load(Ordering::SeqCst) {
+        refresh(app, false).await;
     }
 }
 
@@ -276,16 +314,34 @@ async fn game_phase(launcher: &Launcher, refresh: bool) -> Phase {
         }
         Err(error) => {
             tracing::error!("checking the game failed: {error}");
-            Phase::Error { message: error.to_string() }
+            Phase::failed(&error)
         }
     }
 }
+
+const BETA: &str = "beta";
 
 /// Brings the mods in line with the newest pack, showing progress only when something
 /// downloads or changes. If a new pack can't be downloaded, the installed one stays. Returns
 /// whether the mods changed.
 async fn sync_pack(app: &AppHandle, launcher: &Launcher, repair: bool) -> Result<bool> {
-    let mut prepared = launcher.sync.prepare(&launcher.channel, true, repair).await?;
+    // This sync reads the newest switches and settings; changes after this point set it again.
+    launcher.resync.store(false, Ordering::SeqCst);
+    let wants_beta = app.state::<SettingsStore>().get().beta_updates;
+    let mut channel = if wants_beta { BETA } else { config::DEFAULT_CHANNEL };
+    let mut prepared = launcher.sync.prepare(channel, true, repair).await?;
+    let mut note = None;
+    if wants_beta && !prepared.has_pack() {
+        // Nothing published on beta yet: stay on the regular pack.
+        channel = config::DEFAULT_CHANNEL;
+        prepared = launcher.sync.prepare(channel, true, repair).await?;
+        note = Some("There's no beta release right now, so you're on the regular pack.".to_string());
+    }
+    *lock(&launcher.channel) = channel.to_string();
+    launcher.update_pack(app, |pack| {
+        pack.channel = channel.to_string();
+        pack.note = note;
+    });
     let mut problem = None;
     if !prepared.downloads.is_empty() {
         let downloads = prepared.downloads.clone();
@@ -297,7 +353,7 @@ async fn sync_pack(app: &AppHandle, launcher: &Launcher, repair: bool) -> Result
             tracing::warn!("the pack update couldn't download ({error}); keeping the installed pack");
             let offline = prepared.report.offline;
             let checked_at_ms = prepared.report.checked_at_ms;
-            prepared = launcher.sync.prepare(&launcher.channel, false, false).await?;
+            prepared = launcher.sync.prepare(channel, false, false).await?;
             if !prepared.downloads.is_empty() {
                 return Err(error);
             }
@@ -355,6 +411,14 @@ pub fn pack_info(launcher: tauri::State<'_, Launcher>) -> PackInfo {
 /// Checks for a pack update now (the "Retry" after a failed update).
 #[tauri::command]
 pub fn sync_now(app: AppHandle) {
+    sync_soon(&app);
+}
+
+/// Starts a sync in the background. When other work holds the lock, that work runs the sync
+/// once it's done instead.
+pub fn sync_soon(app: &AppHandle) {
+    app.state::<Launcher>().resync.store(true, Ordering::SeqCst);
+    let app = app.clone();
     tauri::async_runtime::spawn(async move { refresh(&app, false).await });
 }
 
@@ -362,26 +426,90 @@ pub fn sync_now(app: AppHandle) {
 /// starts right away unless the game is running.
 #[tauri::command]
 pub fn set_mod_enabled(app: AppHandle, id: String, enabled: bool) -> Result<()> {
-    app.state::<Launcher>().sync.set_choice(&id, enabled)?;
-    tauri::async_runtime::spawn(async move { refresh(&app, false).await });
+    let launcher = app.state::<Launcher>();
+    // Only mods that the installed pack lets players switch.
+    let switchable = lock(&launcher.manifest).as_ref().is_some_and(|m| m.files.iter().any(|f| f.id == id && crate::sync::is_switchable(f)));
+    if !switchable {
+        return Err(Error::Message(format!("'{id}' isn't a mod you can switch on or off.")));
+    }
+    launcher.sync.set_choice(&id, enabled)?;
+    sync_soon(&app);
     Ok(())
 }
 
-/// PLAY: updates the mods, installs whatever is missing, then starts the game.
+/// What the Mods screen shows.
 #[tauri::command]
-pub fn play(app: AppHandle, options: launch::LaunchOptions) -> Result<()> {
+pub fn mods_view(launcher: tauri::State<'_, Launcher>) -> crate::mods::ModsView {
+    let manifest = lock(&launcher.manifest).clone();
+    let pack = launcher.pack_info();
+    crate::mods::build(manifest.as_deref(), &launcher.sync.choices(), &launcher.sync.updated_from(), pack.extra_mods, pack.disabled_mods)
+}
+
+/// The end of the last game log, for "Copy log" after a crash.
+#[tauri::command]
+pub fn game_log(launcher: tauri::State<'_, Launcher>) -> Result<String> {
+    const MAX: usize = 256 * 1024;
+    let bytes = std::fs::read(launcher.paths.logs().join("game.log")).map_err(|_| Error::Message("There's no game log yet.".into()))?;
+    let tail = &bytes[bytes.len().saturating_sub(MAX)..];
+    Ok(String::from_utf8_lossy(tail).into_owned())
+}
+
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Folder {
+    Game,
+    Logs,
+}
+
+/// Opens the game folder or the logs in File Explorer.
+#[tauri::command]
+pub fn open_folder(app: AppHandle, folder: Folder) -> Result<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let launcher = app.state::<Launcher>();
+    let path = match folder {
+        Folder::Game => launcher.paths.instance(),
+        Folder::Logs => launcher.paths.logs(),
+    };
+    std::fs::create_dir_all(&path)?;
+    app.opener().open_path(path.to_string_lossy(), None::<&str>).map_err(|e| Error::Message(format!("couldn't open the folder: {e}")))
+}
+
+/// PLAY: updates the mods, installs whatever is missing, then starts the game. `target`
+/// overrides the saved "Launch into" choice (the tray's Play CubeCraft).
+#[tauri::command]
+pub fn play(app: AppHandle, target: Option<launch::LaunchTarget>) -> Result<()> {
+    start_play(app, target)
+}
+
+/// The tray's "Play CubeCraft".
+pub fn play_from_tray(app: &AppHandle) {
+    show_window(app);
+    if let Err(error) = start_play(app.clone(), Some(launch::LaunchTarget::Cubecraft)) {
+        tracing::info!("play from the tray: {error}");
+    }
+}
+
+fn start_play(app: AppHandle, target: Option<launch::LaunchTarget>) -> Result<()> {
     let launcher = app.state::<Launcher>();
     if launcher.requested.swap(true, Ordering::SeqCst) {
         return Err(Error::Message("The game is already starting.".into()));
     }
+    let settings = app.state::<SettingsStore>().get();
+    let options = launch::LaunchOptions {
+        target: target.unwrap_or(settings.launch_target),
+        memory_gb: settings.memory_gb,
+        hide_while_playing: settings.hide_while_playing,
+    };
     tauri::async_runtime::spawn(async move {
         let launcher = app.state::<Launcher>();
         // Waits for a background sync to finish first.
         let work = launcher.work.lock().await;
         let result = run(&app, &launcher, options).await;
         launcher.playing.store(false, Ordering::SeqCst);
-        if result.is_ok() && lock(&launcher.pack).update_ready {
-            // The update that came out while the game was running.
+        // An update that came out, or switches flipped, while the game ran. After a crash they
+        // wait for the next check, so the crash message stays up.
+        let finished = result.is_ok();
+        if finished && (lock(&launcher.pack).update_ready || launcher.resync.load(Ordering::SeqCst)) {
             if let Err(error) = sync_pack(&app, &launcher, false).await {
                 tracing::error!("pack sync failed: {error}");
                 launcher.update_pack(&app, |pack| pack.problem = Some(format!("Update failed: {error}")));
@@ -392,12 +520,15 @@ pub fn play(app: AppHandle, options: launch::LaunchOptions) -> Result<()> {
             Err(error) => {
                 tracing::error!("play failed: {error}");
                 show_window(&app);
-                Phase::Error { message: error.to_string() }
+                Phase::failed(&error)
             }
         };
         launcher.set(&app, phase);
         drop(work);
         launcher.requested.store(false, Ordering::SeqCst);
+        if finished {
+            catch_up(&app).await;
+        }
     });
     Ok(())
 }
@@ -444,16 +575,21 @@ pub fn repair(app: AppHandle) -> Result<()> {
     tauri::async_runtime::spawn(async move {
         let launcher = app.state::<Launcher>();
         let work = launcher.work.lock().await;
-        let phase = match repair_files(&app, &launcher).await {
+        let result = repair_files(&app, &launcher).await;
+        let finished = result.is_ok();
+        let phase = match result {
             Ok(()) => game_phase(&launcher, false).await,
             Err(error) => {
                 tracing::error!("repair failed: {error}");
-                Phase::Error { message: error.to_string() }
+                Phase::failed(&error)
             }
         };
         launcher.set(&app, phase);
         drop(work);
         launcher.requested.store(false, Ordering::SeqCst);
+        if finished {
+            catch_up(&app).await;
+        }
     });
     Ok(())
 }
@@ -601,7 +737,7 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
     if let Some(report) = new_crash_report(&command.game_dir, launched_at) {
         message.push_str(&format!(" Crash report: {}.", report.display()));
     }
-    Err(Error::Message(message))
+    Err(Error::Crashed(message))
 }
 
 /// What the game's output says about how starting it went.
@@ -622,7 +758,7 @@ fn mark_playing(app: &AppHandle, launcher: &Launcher, options: &launch::LaunchOp
     false
 }
 
-fn show_window(app: &AppHandle) {
+pub fn show_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();

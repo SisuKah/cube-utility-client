@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { defaultExtras, type ExtrasState } from '../data/pack'
-import { getSystemInfo } from '../native'
+import { getSystemInfo, inApp, settingsStore, type SettingsChange, type SettingsView } from '../native'
 import type { LaunchTarget } from './useLauncher'
 
 export interface Settings {
@@ -8,62 +7,91 @@ export interface Settings {
   hideWhilePlaying: boolean
   betaUpdates: boolean
   launchTarget: LaunchTarget
-  extras: ExtrasState
 }
 
+// Older versions kept settings in browser storage. The app now keeps them on the Rust side
+// (state/settings.json), so PLAY can read them; the browser preview still uses this key.
 const STORAGE_KEY = 'cuc.settings.v1'
 
-function defaults(): Settings {
-  return { memoryGb: 4, hideWhilePlaying: true, betaUpdates: false, launchTarget: 'cubecraft', extras: defaultExtras() }
-}
+const DEFAULTS: Settings = { memoryGb: 4, hideWhilePlaying: true, betaUpdates: false, launchTarget: 'cubecraft' }
 
-// Milestone 1 keeps settings in localStorage. A later milestone moves them to
-// state/settings.json on the Rust side, where the game launch can read them.
-function load(): Settings {
-  const fallback = defaults()
+function loadStored(): Partial<Settings> | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return fallback
-    const saved = JSON.parse(raw) as Partial<Settings>
-    return { ...fallback, ...saved, extras: { ...fallback.extras, ...saved.extras } }
+    if (!raw) return null
+    const { memoryGb, hideWhilePlaying, betaUpdates, launchTarget } = JSON.parse(raw) as Partial<Settings>
+    return { memoryGb, hideWhilePlaying, betaUpdates, launchTarget }
   } catch {
-    return fallback
+    return null
   }
 }
 
-export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(load)
-  const [totalMemoryGb, setTotalMemoryGb] = useState<number | null>(null)
+function store(settings: Settings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  } catch {
+    // Storage can be unavailable; settings then last for this session only.
+  }
+}
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-    } catch {
-      // Storage can be unavailable; settings then last for this session only.
-    }
-  }, [settings])
+function forgetStored() {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // Nothing to clean up.
+  }
+}
+
+function fromView(view: SettingsView): Settings {
+  return { memoryGb: view.memoryGb, hideWhilePlaying: view.hideWhilePlaying, betaUpdates: view.betaUpdates, launchTarget: view.launchTarget }
+}
+
+export function useSettings() {
+  const [settings, setSettings] = useState<Settings>(() => (inApp ? DEFAULTS : { ...DEFAULTS, ...loadStored() }))
+  const [maxMemoryGb, setMaxMemoryGb] = useState(8)
 
   useEffect(() => {
     let alive = true
-    getSystemInfo()
+    if (inApp) {
+      settingsStore
+        .get()
+        .then(async (view) => {
+          // The first time: move settings an older version kept in browser storage.
+          const old = view.fresh ? loadStored() : null
+          if (old) {
+            view = await settingsStore.update(old)
+            forgetStored()
+          }
+          if (!alive) return
+          setSettings(fromView(view))
+          setMaxMemoryGb(view.memory.maxGb)
+        })
+        .catch(() => {})
+    } else {
       // Outside the app there is no Rust side; pretend the PC has 16 GB.
-      .then((info) => alive && setTotalMemoryGb(info?.totalMemoryGb ?? 16))
-      .catch(() => alive && setTotalMemoryGb(8))
+      getSystemInfo()
+        .then((info) => alive && setMaxMemoryGb(Math.max(2, Math.min(16, Math.floor((info?.totalMemoryGb ?? 16) / 2)))))
+        .catch(() => {})
+    }
     return () => {
       alive = false
     }
   }, [])
 
   const update = useCallback(<K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings((current) => ({ ...current, [key]: value }))
+    setSettings((current) => {
+      const next = { ...current, [key]: value }
+      if (!inApp) store(next)
+      return next
+    })
+    if (inApp) {
+      const change: SettingsChange = { [key]: value }
+      settingsStore
+        .update(change)
+        .then((view) => setSettings(fromView(view)))
+        .catch(() => {})
+    }
   }, [])
 
-  const setExtra = useCallback((id: string, on: boolean) => {
-    setSettings((current) => ({ ...current, extras: { ...current.extras, [id]: on } }))
-  }, [])
-
-  // Up to 16 GB or half the PC's memory, whichever is lower.
-  const maxMemoryGb = Math.max(2, Math.min(16, Math.floor((totalMemoryGb ?? 8) / 2)))
-
-  return { settings, update, setExtra, maxMemoryGb }
+  return { settings, update, maxMemoryGb }
 }

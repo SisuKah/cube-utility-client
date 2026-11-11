@@ -19,7 +19,7 @@ pub const DEFAULT_FABRIC_LOADER_VERSION: &str = "0.20.1";
 pub const PACK_BASE_URL: &str = "https://sisukah.github.io/cube-utility-client";
 
 /// Debug builds sync from `npm run pack:serve` on this PC, or from CUC_PACK_URL when it's set.
-pub const DEV_PACK_BASE_URL: &str = "http://127.0.0.1:8787";
+pub const DEV_PACK_BASE_URL: &str = "http://127.0.0.1:8799";
 
 pub const DEFAULT_CHANNEL: &str = "stable";
 

@@ -1,5 +1,7 @@
-import { ArrowRight, RotateCw, Wrench } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowRight, Check, Copy, RotateCw, Wrench } from 'lucide-react'
 import { config } from '../config'
+import { launcher as native } from '../native'
 import { CharacterStage } from '../components/CharacterStage'
 import { PlayButton, type ButtonOverride } from '../components/PlayButton'
 import { StripedProgress } from '../components/StripedProgress'
@@ -97,8 +99,25 @@ function ago(ms: number): string {
   return `${days} day${days === 1 ? '' : 's'} ago`
 }
 
+const LINK_BUTTON = 'inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-gold-bright hover:text-[#f1d7a6]'
+
+/** "Copy log": puts the end of the game log on the clipboard, for asking for help. */
+function useCopyLog() {
+  const [result, setResult] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const copy = () => {
+    native
+      .gameLog()
+      .then((log) => navigator.clipboard.writeText(log))
+      .then(() => setResult('copied'))
+      .catch(() => setResult('failed'))
+      .finally(() => setTimeout(() => setResult('idle'), 2500))
+  }
+  return { result, copy }
+}
+
 export function Home({ launcher, account, onPlay, onRepair, onRetryUpdate, target, onTarget, modCount, onOpenMods }: Props) {
   const { phase, demo, pack } = launcher
+  const copyLog = useCopyLog()
   // Only when nothing else is going on: downloads and errors keep their own screen.
   const gate = phase === 'idle' || phase === 'offline' || phase === 'needsInstall' ? signInGate(account) : null
   const game = `Minecraft ${pack.minecraft}`
@@ -157,7 +176,11 @@ export function Home({ launcher, account, onPlay, onRepair, onRetryUpdate, targe
           retry: true
         }
       case 'error':
-        return { text: 'Press TRY AGAIN to retry', color: COLORS.bad, blink: false }
+        return {
+          text: launcher.crashed ? 'Copy the log if you ask someone for help' : 'Press TRY AGAIN to retry',
+          color: COLORS.bad,
+          blink: false
+        }
       default:
         return null
     }
@@ -171,7 +194,9 @@ export function Home({ launcher, account, onPlay, onRepair, onRetryUpdate, targe
       <section className="flex min-w-0 max-w-[540px] flex-[1_1_420px] flex-col items-start gap-[30px]">
         <div>
           <p className="text-[13px] font-bold tracking-[0.18em] text-gold">MINECRAFT {pack.minecraft} · CUBECRAFT READY</p>
-          <h1 className="mt-3.5 text-[60px] font-light leading-[66px] tracking-[-0.03em]">{gate?.headline ?? HEADLINES[phase]}</h1>
+          <h1 className="mt-3.5 text-[60px] font-light leading-[66px] tracking-[-0.03em]">
+            {gate?.headline ?? (phase === 'error' && launcher.crashed ? 'Minecraft crashed' : HEADLINES[phase])}
+          </h1>
           <p
             className={`mt-3.5 max-w-[440px] text-[17px] leading-[26px] wrap-anywhere ${phase === 'error' ? 'select-text text-[#f2a3b4]' : 'text-text-2'}`}
           >
@@ -209,7 +234,7 @@ export function Home({ launcher, account, onPlay, onRepair, onRetryUpdate, targe
             </div>
           ) : (
             status && (
-              <div className="inline-flex items-center gap-2.5 text-sm text-[#c9d3d2]">
+              <div role="status" className="inline-flex items-center gap-2.5 text-sm text-[#c9d3d2]">
                 <span
                   aria-hidden="true"
                   className={`block size-2 rounded-full ${status.blink ? 'animate-blink' : ''}`}
@@ -230,14 +255,18 @@ export function Home({ launcher, account, onPlay, onRepair, onRetryUpdate, targe
             )
           )}
           {phase === 'error' && !demo && (
-            <button
-              type="button"
-              onClick={onRepair}
-              className="inline-flex cursor-pointer items-center gap-2 self-start text-sm font-semibold text-gold-bright hover:text-[#f1d7a6]"
-            >
-              <Wrench aria-hidden="true" className="size-4" />
-              Repair files
-            </button>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              {launcher.crashed && (
+                <button type="button" onClick={copyLog.copy} className={LINK_BUTTON}>
+                  {copyLog.result === 'copied' ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
+                  {copyLog.result === 'copied' ? 'Log copied' : copyLog.result === 'failed' ? 'Couldn’t copy the log' : 'Copy log'}
+                </button>
+              )}
+              <button type="button" onClick={onRepair} className={LINK_BUTTON}>
+                <Wrench aria-hidden="true" className="size-4" />
+                Repair files
+              </button>
+            </div>
           )}
           {showWhatsNew && (
             <button

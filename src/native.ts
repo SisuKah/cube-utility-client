@@ -25,12 +25,57 @@ export type LauncherPhase =
   | { phase: 'ready' }
   | { phase: 'launching' }
   | { phase: 'playing'; startedAtMs: number }
-  | { phase: 'error'; message: string }
+  /** `crashed`: Minecraft itself closed with an error, so the game log is worth copying. */
+  | { phase: 'error'; message: string; crashed: boolean }
 
-export interface PlayOptions {
-  target: 'cubecraft' | 'title'
+export type LaunchTarget = 'cubecraft' | 'title'
+
+/** The player's settings, saved by Rust in state/settings.json (src-tauri/src/settings.rs). */
+export interface SettingsView {
   memoryGb: number
   hideWhilePlaying: boolean
+  betaUpdates: boolean
+  launchTarget: LaunchTarget
+  memory: { totalGb: number; maxGb: number; defaultGb: number }
+  /** Nothing was saved yet. */
+  fresh: boolean
+}
+
+export type SettingsChange = Partial<Pick<SettingsView, 'memoryGb' | 'hideWhilePlaying' | 'betaUpdates' | 'launchTarget'>>
+
+export const settingsStore = {
+  get: () => invoke<SettingsView>('get_settings'),
+  update: (change: SettingsChange) => invoke<SettingsView>('update_settings', { change })
+}
+
+/** What the Mods screen shows (src-tauri/src/mods.rs). */
+export interface ModCard {
+  id: string
+  name: string
+  version: string
+  description: string | null
+  /** The version before the latest update changed it. */
+  updatedFrom: string | null
+}
+
+export interface ExtraCard {
+  id: string
+  name: string
+  version: string
+  description: string | null
+  enabled: boolean
+  /** Libraries that come with it while it's on. */
+  needs: string[]
+}
+
+export interface ModsView {
+  installed: boolean
+  own: ModCard[]
+  extras: ExtraCard[]
+  always: string[]
+  playerJars: string[]
+  disabledJars: string[]
+  allowExtraMods: boolean
 }
 
 /** What Rust knows about the installed pack (PackInfo in src-tauri/src/launcher.rs). */
@@ -55,13 +100,22 @@ export interface PackInfo {
   updatedAtMs: number | null
   extraMods: string[]
   disabledMods: string[]
+  /** Something worth knowing that isn't a problem, like "no beta release right now". */
+  note: string | null
 }
 
 export const launcher = {
   state: () => invoke<LauncherPhase>('launcher_state'),
   packInfo: () => invoke<PackInfo>('pack_info'),
-  /** Updates the mods, installs anything missing, then starts the game. Progress arrives through onState. */
-  play: (options: PlayOptions) => invoke<void>('play', { options }),
+  /**
+   * Updates the mods, installs anything missing, then starts the game with the saved settings.
+   * Progress arrives through onState.
+   */
+  play: (target?: LaunchTarget) => invoke<void>('play', { target: target ?? null }),
+  modsView: () => invoke<ModsView>('mods_view'),
+  /** The end of the last game log, for "Copy log". */
+  gameLog: () => invoke<string>('game_log'),
+  openFolder: (folder: 'game' | 'logs') => invoke<void>('open_folder', { folder }),
   /** Re-checks every mod and game file and downloads what's damaged. */
   repair: () => invoke<void>('repair'),
   /** Looks for a pack update now. */

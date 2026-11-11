@@ -436,8 +436,8 @@ mod tests {
     #[test]
     fn debug_builds_take_a_local_pack_server() {
         // Tests are debug builds: `npm run pack:serve` on this PC is allowed, other http isn't.
-        assert!(is_allowed_str("http://127.0.0.1:8787/stable/manifest.json"));
-        assert!(!is_allowed_str("http://192.168.1.10:8787/stable/manifest.json"));
+        assert!(is_allowed_str("http://127.0.0.1:8799/stable/manifest.json"));
+        assert!(!is_allowed_str("http://192.168.1.10:8799/stable/manifest.json"));
     }
 
     #[test]

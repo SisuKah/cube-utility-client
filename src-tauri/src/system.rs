@@ -8,15 +8,19 @@ pub struct SystemInfo {
     pub total_memory_gb: u64,
 }
 
+/// The PC's memory in whole gigabytes, or None when it can't be read.
+pub fn total_memory_gb() -> Option<u64> {
+    let mut system = System::new().ok()?;
+    system.refresh_memory();
+    let gib = system.total_memory() as f64 / 1024_f64.powi(3);
+    Some(gib.round() as u64)
+}
+
 /// Reads the PC's total memory. On error the UI falls back to a safe default.
 #[tauri::command]
 pub fn system_info() -> Result<SystemInfo, String> {
-    let mut system = System::new().map_err(|e| format!("could not read system information: {e}"))?;
-    system.refresh_memory();
-    let gib = system.total_memory() as f64 / 1024_f64.powi(3);
-    Ok(SystemInfo {
-        total_memory_gb: gib.round() as u64,
-    })
+    let total_memory_gb = total_memory_gb().ok_or("could not read system information")?;
+    Ok(SystemInfo { total_memory_gb })
 }
 
 #[cfg(test)]

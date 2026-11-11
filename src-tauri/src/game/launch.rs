@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config;
 use crate::paths::Paths;
@@ -12,7 +12,7 @@ use super::args;
 use super::install::GamePlan;
 use super::rules::{Features, Platform};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LaunchTarget {
     /// Joins play.cubecraft.net straight away (Quick Play).
@@ -22,8 +22,7 @@ pub enum LaunchTarget {
 }
 
 /// What the player chose on Home and in Settings.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct LaunchOptions {
     pub target: LaunchTarget,
     pub memory_gb: u32,

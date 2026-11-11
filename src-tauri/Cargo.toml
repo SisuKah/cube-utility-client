@@ -9,7 +9,7 @@ publish = false
 tauri-build = { version = "2.7", features = [] }
 
 [dependencies]
-tauri = { version = "2.12", features = [] }
+tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2.5"
 tauri-plugin-updater = "2.14"
 # Opens Microsoft's sign-in page in the player's own browser.

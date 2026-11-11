@@ -3,7 +3,7 @@
 //!   pack keys [--force]                   create the signing key pair
 //!   pack build [--channel beta] [--files-url URL] [--serial N] [--force]
 //!   pack add <jar> [--notes "text"]       put a new build of one of my mods in the pack
-//!   pack serve [--port 8787]              serve pack/out to test launchers locally
+//!   pack serve [--port 8799]              serve pack/out to test launchers locally
 //!   pack rollback <packVersion> [--channel beta]
 
 mod build;
@@ -27,7 +27,7 @@ const USAGE: &str = "usage:
   pack keys [--force]
   pack build [--channel beta] [--files-url URL] [--serial N] [--force]
   pack add <jar> [--notes \"text\"]
-  pack serve [--port 8787]
+  pack serve [--port 8799]
   pack rollback <packVersion> [--channel beta]";
 
 /// Positional arguments, and `--name value` flags (`--force` style flags get an empty value).
@@ -71,7 +71,7 @@ fn main() -> ExitCode {
         "keys" => keys(&root, args.flags.contains_key("force")),
         "build" => build::run(&root, &args),
         "add" => add(&root, &args),
-        "serve" => serve::run(&pack_dir(&root).join("out"), args.flag("port").and_then(|p| p.parse().ok()).unwrap_or(8787)),
+        "serve" => serve::run(&pack_dir(&root).join("out"), args.flag("port").and_then(|p| p.parse().ok()).unwrap_or(8799)),
         "rollback" => rollback(&root, &args),
         _ => Err(USAGE.into()),
     };

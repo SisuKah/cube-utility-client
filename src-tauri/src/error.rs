@@ -15,6 +15,9 @@ pub enum Error {
     Checksum(String),
     #[error("Can't reach the download servers, and the game isn't fully downloaded yet. Check your internet connection and try again.")]
     Offline,
+    /// Minecraft started but closed with an error (or Fabric refused the mods).
+    #[error("{0}")]
+    Crashed(String),
     #[error("{0}")]
     Message(String),
 }

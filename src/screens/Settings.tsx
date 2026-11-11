@@ -1,8 +1,9 @@
 import { FileText, FolderOpen, LogOut, Wrench } from 'lucide-react'
 import { config } from '../config'
 import { Switch } from '../components/Switch'
-import { pack } from '../data/pack'
+import { inApp, launcher } from '../native'
 import type { AccountView } from '../state/useAccount'
+import type { PackSummary } from '../state/useLauncher'
 import type { Settings as SettingsState } from '../state/useSettings'
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   maxMemoryGb: number
   onChange: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
   account: AccountView
+  pack: PackSummary
   onRepair: () => void
 }
 
@@ -18,15 +20,21 @@ const TOGGLES = [
   { key: 'betaUpdates', name: 'Beta updates', description: 'Get new versions of the mods a little earlier. They may have bugs.' }
 ] as const
 
-export function Settings({ settings, maxMemoryGb, onChange, account, onRepair }: Props) {
+export function Settings({ settings, maxMemoryGb, onChange, account, pack, onRepair }: Props) {
   const memory = Math.min(settings.memoryGb, maxMemoryGb)
-  const signedOut = account.info.state === 'signedOut' || account.info.state === 'signingIn' || account.info.state === 'checking'
-  // Open game folder and Open logs come with milestone 6.
+  const signedIn = !['signedOut', 'signingIn', 'checking'].includes(account.info.state)
   const actions = [
-    { label: 'Open game folder', Icon: FolderOpen, onClick: undefined },
-    { label: 'Open logs', Icon: FileText, onClick: undefined },
+    { label: 'Open game folder', Icon: FolderOpen, onClick: inApp ? () => void launcher.openFolder('game').catch(() => {}) : undefined },
+    { label: 'Open logs', Icon: FileText, onClick: inApp ? () => void launcher.openFolder('logs').catch(() => {}) : undefined },
     { label: 'Repair files', Icon: Wrench, onClick: onRepair },
-    { label: 'Sign out', Icon: LogOut, onClick: signedOut ? undefined : account.signOut }
+    { label: 'Sign out', Icon: LogOut, onClick: signedIn ? account.signOut : undefined }
+  ]
+  const versions = [
+    `Launcher ${__APP_VERSION__}`,
+    pack.version ? `Pack ${pack.version}${pack.channel === 'beta' ? ' (beta)' : ''}` : 'No pack yet',
+    `Minecraft ${pack.minecraft}`,
+    `Fabric Loader ${pack.fabricLoader}`,
+    `Java ${pack.java ?? 25}`
   ]
 
   return (
@@ -50,6 +58,7 @@ export function Settings({ settings, maxMemoryGb, onChange, account, onRepair }:
           max={maxMemoryGb}
           step={1}
           value={memory}
+          aria-valuetext={`${memory} GB`}
           onChange={(e) => onChange('memoryGb', Number(e.target.value))}
           className="mt-3.5 w-full cursor-pointer"
         />
@@ -66,6 +75,11 @@ export function Settings({ settings, maxMemoryGb, onChange, account, onRepair }:
             <div className="min-w-0 flex-1">
               <div className="text-[15px] font-semibold">{toggle.name}</div>
               <div className="mt-0.5 text-[13px] leading-[19px] text-text-2">{toggle.description}</div>
+              {toggle.key === 'betaUpdates' && settings.betaUpdates && pack.note && (
+                <div role="status" className="mt-1.5 text-[13px] leading-[19px] text-gold-bright">
+                  {pack.note}
+                </div>
+              )}
             </div>
             <Switch checked={settings[toggle.key]} onChange={(on) => onChange(toggle.key, on)} label={toggle.name} />
           </div>
@@ -80,21 +94,18 @@ export function Settings({ settings, maxMemoryGb, onChange, account, onRepair }:
               type="button"
               onClick={onClick}
               disabled={!onClick}
-              className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-[10px] border border-white/10 bg-surface-2 px-3.5 text-sm text-text-2 enabled:hover:border-white/20 enabled:hover:text-text disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-gold-bright"
+              className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-[10px] border border-white/10 bg-surface-2 px-3.5 text-sm text-text-2 enabled:hover:border-white/20 enabled:hover:text-text disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Icon aria-hidden="true" className="size-4 text-gold" strokeWidth={1.6} />
               {label}
             </button>
           ))}
         </div>
-        <p className="mt-2.5 text-xs text-text-3">Open game folder and Open logs start working in a later update.</p>
       </section>
 
       <section className="rounded-2xl border border-line bg-surface-1 px-[22px] py-[18px]">
         <h2 className="text-[15px] font-semibold">About</h2>
-        <p className="mt-1.5 text-[13px] leading-5 text-text-2">
-          Launcher {__APP_VERSION__} · Pack {pack.version} · Minecraft {pack.minecraft} · Fabric Loader {pack.fabricLoader} · Java {pack.java}
-        </p>
+        <p className="mt-1.5 select-text text-[13px] leading-5 text-text-2">{versions.join(' · ')}</p>
         <p className="mt-1.5 text-xs leading-[18px] text-text-3">{config.disclaimer}</p>
       </section>
     </div>

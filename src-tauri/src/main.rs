@@ -7,10 +7,13 @@ mod error;
 mod game;
 mod launcher;
 mod logs;
+mod mods;
 mod net;
 mod paths;
+mod settings;
 mod sync;
 mod system;
+mod tray;
 mod update;
 
 use tauri::Manager;
@@ -43,8 +46,13 @@ fn main() {
                 None => tracing::info!("no pack server set yet, so no mods are synced"),
             }
             let net = net::Net::new()?;
+            let memory = settings::MemoryLimits::for_total(system::total_memory_gb().unwrap_or(8) as u32);
+            let settings = settings::SettingsStore::load(&paths, memory);
+            let beta = settings.get().beta_updates;
+            app.manage(settings);
             app.manage(auth::Auth::new(paths.clone(), net.clone()));
-            app.manage(launcher::Launcher::new(paths, net, version));
+            app.manage(launcher::Launcher::new(paths, net, version, beta));
+            tray::create(app)?;
             auth::start(app.handle().clone());
             launcher::start(app.handle().clone());
             update::start(app.handle().clone());
@@ -58,6 +66,11 @@ fn main() {
             launcher::repair,
             launcher::set_mod_enabled,
             launcher::sync_now,
+            launcher::mods_view,
+            launcher::game_log,
+            launcher::open_folder,
+            settings::get_settings,
+            settings::update_settings,
             update::update_ready,
             update::restart_to_update,
             auth::account_state,

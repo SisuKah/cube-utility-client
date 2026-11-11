@@ -1,5 +1,5 @@
-// Milestone 1: static data that mirrors pack/pack.yml, so the screens can be built.
-// Milestone 3 replaces all of this with the signed manifest.
+// Sample data for the browser preview (`npm run dev:web`), where there's no Rust side.
+// The app shows the real pack from the signed manifest instead.
 
 export const pack = {
   version: '2026.11.10-1',
@@ -134,20 +134,4 @@ export type ExtrasState = Record<string, boolean>
 
 export function defaultExtras(): ExtrasState {
   return Object.fromEntries(extraMods.map((m) => [m.id, m.defaultOn]))
-}
-
-/** Libraries pulled in by the extras that are switched on, labeled with the mod that needs them. */
-export function extraLibraries(extras: ExtrasState): string[] {
-  const libraries = new Map<string, string>()
-  for (const mod of extraMods) {
-    if (!extras[mod.id]) continue
-    for (const lib of mod.needs ?? []) if (!libraries.has(lib)) libraries.set(lib, mod.name)
-  }
-  return [...libraries].map(([lib, mod]) => `${lib} (for ${mod})`)
-}
-
-export function modCount(extras: ExtrasState): number {
-  const enabled = extraMods.filter((m) => extras[m.id])
-  const libraries = new Set(enabled.flatMap((m) => m.needs ?? []))
-  return ownMods.length + alwaysOn.length + enabled.length + libraries.size
 }

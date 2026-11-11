@@ -4,28 +4,25 @@ import { config } from './config'
 import { DevPanel } from './components/DevPanel'
 import { TopBar, type Tab } from './components/TopBar'
 import { UpdateToast } from './components/UpdateToast'
-import { modCount } from './data/pack'
 import { Home } from './screens/Home'
 import { Mods } from './screens/Mods'
 import { Settings } from './screens/Settings'
 import { useAccount } from './state/useAccount'
 import { useLauncher } from './state/useLauncher'
 import { useLauncherUpdate } from './state/useLauncherUpdate'
+import { countMods, useMods } from './state/useMods'
 import { useSettings } from './state/useSettings'
 
 export function App() {
   const [tab, setTab] = useState<Tab>('home')
   const scrollArea = useRef<HTMLDivElement>(null)
-  const { settings, update, setExtra, maxMemoryGb } = useSettings()
-  const { state: launcher, play, repair, retryUpdate, preview } = useLauncher({
-    target: settings.launchTarget,
-    memoryGb: Math.min(settings.memoryGb, maxMemoryGb),
-    hideWhilePlaying: settings.hideWhilePlaying
-  })
+  const { settings, update, maxMemoryGb } = useSettings()
+  const { state: launcher, play, repair, retryUpdate, preview } = useLauncher()
   const launcherUpdate = useLauncherUpdate()
   const account = useAccount()
-  // The Mods screen still shows sample data until milestone 6; Home counts the real mods in the app.
-  const count = modCount(settings.extras)
+  const mods = useMods()
+  // The app counts what the sync installed; the browser preview counts its sample pack.
+  const modCount = launcher.demo ? (mods.view ? countMods(mods.view) : 0) : launcher.pack.modCount
 
   return (
     <MotionConfig reducedMotion="user">
@@ -52,13 +49,13 @@ export function App() {
                   onRetryUpdate={retryUpdate}
                   target={settings.launchTarget}
                   onTarget={(target) => update('launchTarget', target)}
-                  modCount={launcher.demo ? count : launcher.pack.modCount}
+                  modCount={modCount}
                   onOpenMods={() => setTab('mods')}
                 />
               )}
-              {tab === 'mods' && <Mods extras={settings.extras} onExtra={setExtra} modCount={count} />}
+              {tab === 'mods' && <Mods mods={mods} modCount={modCount} />}
               {tab === 'settings' && (
-                <Settings settings={settings} maxMemoryGb={maxMemoryGb} onChange={update} account={account} onRepair={repair} />
+                <Settings settings={settings} maxMemoryGb={maxMemoryGb} onChange={update} account={account} pack={launcher.pack} onRepair={repair} />
               )}
             </motion.main>
           </AnimatePresence>

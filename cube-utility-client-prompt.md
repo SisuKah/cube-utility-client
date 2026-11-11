@@ -270,7 +270,7 @@ Empty parts of the top bar drag the window (`data-tauri-drag-region`), and doubl
 **Mods**
 - Title "Mods" and "23 mods, kept up to date automatically."
 - "Cube Utility mods": a card for each of my five mods with a monogram icon, name, version and a one-line description, plus an "Updated from 1.5.3" badge when it changed in the latest pack.
-- "Extras · you choose": the optional mods as rows with on/off switches, and a note under them: "Changes apply the next time you press PLAY."
+- "Extras · you choose": the optional mods as rows with on/off switches, and a note under them: "Changes apply right away, or when you close Minecraft if it's running."
 - "Performance and libraries": one card of name chips, always on.
 - "Your extra mods" appears only when the player added jars themselves (rule 7 in 3.5).
 

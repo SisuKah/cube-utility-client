@@ -22,6 +22,9 @@ pub struct SyncState {
     /// The last time the pack server answered (ms since 1970).
     #[serde(default)]
     pub checked_at_ms: Option<u64>,
+    /// Mods the latest update changed: mod id → the version before it (for "Updated from").
+    #[serde(default)]
+    pub updated_from: BTreeMap<String, String>,
     /// Files the launcher put in the game folder: path inside it → what was written.
     #[serde(default)]
     pub files: BTreeMap<String, FileRecord>,

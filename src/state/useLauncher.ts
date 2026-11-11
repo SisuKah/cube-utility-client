@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { pack as samplePack } from '../data/pack'
-import { inApp, launcher, type LauncherPhase, type PackInfo, type PlayOptions } from '../native'
+import { inApp, launcher, type LaunchTarget as Target, type LauncherPhase, type PackInfo } from '../native'
 
 export type Phase =
   | 'checking'
@@ -13,7 +13,7 @@ export type Phase =
   | 'playing'
   | 'offline'
   | 'error'
-export type LaunchTarget = PlayOptions['target']
+export type LaunchTarget = Target
 export type PreviewState = 'update' | 'ready' | 'offline'
 
 /** The pack as the screens show it. */
@@ -34,6 +34,10 @@ export interface PackSummary {
   /** A newer pack is waiting for the game to close. */
   updateReady: boolean
   extraMods: string[]
+  /** Something worth knowing, like "no beta release right now". */
+  note: string | null
+  /** "stable" or "beta". */
+  channel: string
 }
 
 export interface LauncherState {
@@ -51,6 +55,8 @@ export interface LauncherState {
   justUpdated: boolean
   playSeconds: number
   error: string
+  /** Minecraft itself closed with an error (as opposed to a download or install problem). */
+  crashed: boolean
   pack: PackSummary
 }
 
@@ -67,7 +73,9 @@ const NO_PACK: PackSummary = {
   checkedAtMs: null,
   problem: null,
   updateReady: false,
-  extraMods: []
+  extraMods: [],
+  note: null,
+  channel: 'stable'
 }
 
 const BASE: Omit<LauncherState, 'demo' | 'phase' | 'pack'> = {
@@ -78,13 +86,14 @@ const BASE: Omit<LauncherState, 'demo' | 'phase' | 'pack'> = {
   installMb: 0,
   justUpdated: false,
   playSeconds: 0,
-  error: ''
+  error: '',
+  crashed: false
 }
 
 /** The real launcher in the app; a pretend one in the browser preview. */
-export function useLauncher(options: PlayOptions) {
+export function useLauncher() {
   // `inApp` never changes while the page runs, so the hook order stays stable.
-  return inApp ? useAppLauncher(options) : useDemoLauncher()
+  return inApp ? useAppLauncher() : useDemoLauncher()
 }
 
 function summarize(info: PackInfo | null): PackSummary {
@@ -100,7 +109,9 @@ function summarize(info: PackInfo | null): PackSummary {
     checkedAtMs: info.checkedAtMs,
     problem: info.problem,
     updateReady: info.updateReady,
-    extraMods: info.extraMods
+    extraMods: info.extraMods,
+    note: info.note,
+    channel: info.channel
   }
 }
 
@@ -142,19 +153,14 @@ function toState(rust: LauncherPhase, info: PackInfo | null, now: number): Launc
     case 'playing':
       return { ...base, phase: 'playing', playSeconds: Math.max(0, Math.floor((now - rust.startedAtMs) / 1000)) }
     case 'error':
-      return { ...base, phase: 'error', error: rust.message }
+      return { ...base, phase: 'error', error: rust.message, crashed: rust.crashed }
   }
 }
 
-function useAppLauncher(options: PlayOptions) {
+function useAppLauncher() {
   const [rust, setRust] = useState<LauncherPhase>({ phase: 'checking' })
   const [info, setInfo] = useState<PackInfo | null>(null)
   const [now, setNow] = useState(() => Date.now())
-  const latestOptions = useRef(options)
-
-  useEffect(() => {
-    latestOptions.current = options
-  })
 
   // Listen first, then ask for the current state, so no update slips through.
   useEffect(() => {
@@ -184,9 +190,9 @@ function useAppLauncher(options: PlayOptions) {
     return () => clearInterval(timer)
   }, [rust.phase])
 
-  const fail = (error: unknown) => setRust({ phase: 'error', message: String(error) })
+  const fail = (error: unknown) => setRust({ phase: 'error', message: String(error), crashed: false })
   const play = useCallback(() => {
-    launcher.play(latestOptions.current).catch(fail)
+    launcher.play().catch(fail)
   }, [])
   const repair = useCallback(() => {
     launcher.repair().catch(fail)

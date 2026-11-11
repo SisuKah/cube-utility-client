@@ -28,7 +28,7 @@ const BUILT_IN: &[&str] = &["minecraft", "java", "fabricloader", "fabric-loader"
 const MODRINTH_SLUGS: &[(&str, &str)] = &[("fabric", "fabric-api"), ("cloth-config2", "cloth-config"), ("yet_another_config_lib_v3", "yacl")];
 
 /// Where launchers download my jars and the configs from when testing locally (`pack serve`).
-pub const LOCAL_FILES_URL: &str = "http://127.0.0.1:8787/{channel}/files/{packVersion}";
+pub const LOCAL_FILES_URL: &str = "http://127.0.0.1:8799/{channel}/files/{packVersion}";
 
 /// When a mod has to be installed.
 #[derive(Debug, Clone, PartialEq, Eq)]

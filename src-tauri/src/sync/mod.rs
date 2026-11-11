@@ -10,7 +10,7 @@ mod fetch;
 mod plan;
 mod state;
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -24,7 +24,7 @@ use crate::paths::Paths;
 
 use apply::{Changes, Want};
 use fetch::{Response, TrustError, Verdict};
-pub use plan::Choices;
+pub use plan::{is_switchable, Choices};
 pub use state::write_atomic;
 use state::SyncState;
 
@@ -76,6 +76,8 @@ pub struct Prepared {
     target: Option<Signed>,
     /// The target is newer than the installed pack, so it gets saved once applied.
     is_update: bool,
+    /// For an update: mod id → the installed version it replaces.
+    updated_from: BTreeMap<String, String>,
     state: SyncState,
     changes: Changes,
     pub downloads: Vec<Download>,
@@ -89,6 +91,11 @@ impl Prepared {
 
     pub fn has_changes(&self) -> bool {
         !self.changes.is_empty()
+    }
+
+    /// There's a pack to install: published on the channel, or installed earlier.
+    pub fn has_pack(&self) -> bool {
+        self.target.is_some()
     }
 }
 
@@ -145,6 +152,11 @@ impl PackSync {
     pub fn saved_status(&self) -> (Option<u64>, usize) {
         let state = SyncState::load(&self.state_file());
         (state.checked_at_ms, state.files.len())
+    }
+
+    /// Mods the latest update changed: mod id → the version before it.
+    pub fn updated_from(&self) -> BTreeMap<String, String> {
+        SyncState::load(&self.state_file()).updated_from
     }
 
     /// The player's on/off choices for optional mods.
@@ -211,12 +223,17 @@ impl PackSync {
         report.checked_at_ms = state.checked_at_ms;
 
         let is_update = newer.is_some();
+        let updated_from = match (&newer, &installed) {
+            (Some(newer), Some(installed)) => changed_versions(&installed.manifest, &newer.manifest),
+            _ => BTreeMap::new(),
+        };
         let Some(target) = newer.or(installed) else {
             return Ok(Prepared {
                 channel: channel.to_string(),
                 key,
                 target: None,
                 is_update,
+                updated_from,
                 state,
                 changes: Changes::default(),
                 downloads: Vec::new(),
@@ -251,12 +268,12 @@ impl PackSync {
         .await
         .map_err(join_error)??;
         report.extras = changes.extras.clone();
-        Ok(Prepared { channel: channel.to_string(), key, target: Some(target), is_update, state, changes, downloads, report })
+        Ok(Prepared { channel: channel.to_string(), key, target: Some(target), is_update, updated_from, state, changes, downloads, report })
     }
 
     /// Applies the changes, then saves the new manifest, then the state that names its serial.
     pub async fn finish(&self, prepared: Prepared) -> Result<Report> {
-        let Prepared { channel, key, target, is_update, mut state, changes, mut report, .. } = prepared;
+        let Prepared { channel, key, target, is_update, updated_from, mut state, changes, mut report, .. } = prepared;
         let paths = self.paths.clone();
         let state_file = self.state_file();
         let manifest_file = self.saved_manifest(&channel);
@@ -273,6 +290,7 @@ impl PackSync {
                 state::write_atomic(&manifest_file, &target.bytes)?;
                 state::write_atomic(&signature_path(&manifest_file), target.signature.as_bytes())?;
                 state.serials.insert(key.clone(), target.manifest.serial);
+                state.updated_from = updated_from;
                 match &target.etag {
                     Some(etag) => state.etags.insert(key.clone(), etag.clone()),
                     None => state.etags.remove(&key),
@@ -330,6 +348,17 @@ impl PackSync {
             }
         }
     }
+}
+
+/// Mods in both packs whose version changed: mod id → the old version.
+fn changed_versions(old: &Manifest, new: &Manifest) -> BTreeMap<String, String> {
+    new.files
+        .iter()
+        .filter_map(|file| {
+            let before = old.files.iter().find(|o| o.id == file.id)?;
+            (before.version != file.version).then(|| (file.id.clone(), before.version.clone()))
+        })
+        .collect()
 }
 
 /// Whether the cache already has this file. Repair re-hashes it too.
