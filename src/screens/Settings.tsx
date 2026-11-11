@@ -2,12 +2,15 @@ import { FileText, FolderOpen, LogOut, Wrench } from 'lucide-react'
 import { config } from '../config'
 import { Switch } from '../components/Switch'
 import { pack } from '../data/pack'
+import type { AccountView } from '../state/useAccount'
 import type { Settings as SettingsState } from '../state/useSettings'
 
 interface Props {
   settings: SettingsState
   maxMemoryGb: number
   onChange: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
+  account: AccountView
+  onRepair: () => void
 }
 
 const TOGGLES = [
@@ -15,16 +18,16 @@ const TOGGLES = [
   { key: 'betaUpdates', name: 'Beta updates', description: 'Get new versions of the mods a little earlier. They may have bugs.' }
 ] as const
 
-// These start working in later milestones (game folder, logs, repair, sign-in).
-const ACTIONS = [
-  { label: 'Open game folder', Icon: FolderOpen },
-  { label: 'Open logs', Icon: FileText },
-  { label: 'Repair files', Icon: Wrench },
-  { label: 'Sign out', Icon: LogOut }
-]
-
-export function Settings({ settings, maxMemoryGb, onChange }: Props) {
+export function Settings({ settings, maxMemoryGb, onChange, account, onRepair }: Props) {
   const memory = Math.min(settings.memoryGb, maxMemoryGb)
+  const signedOut = account.info.state === 'signedOut' || account.info.state === 'signingIn' || account.info.state === 'checking'
+  // Open game folder and Open logs come with milestone 6.
+  const actions = [
+    { label: 'Open game folder', Icon: FolderOpen, onClick: undefined },
+    { label: 'Open logs', Icon: FileText, onClick: undefined },
+    { label: 'Repair files', Icon: Wrench, onClick: onRepair },
+    { label: 'Sign out', Icon: LogOut, onClick: signedOut ? undefined : account.signOut }
+  ]
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 px-8 pb-8 pt-2">
@@ -71,19 +74,20 @@ export function Settings({ settings, maxMemoryGb, onChange }: Props) {
 
       <section className="rounded-2xl border border-line bg-surface-1 px-[22px] py-5">
         <div className="flex flex-wrap gap-2">
-          {ACTIONS.map(({ label, Icon }) => (
+          {actions.map(({ label, Icon, onClick }) => (
             <button
               key={label}
               type="button"
-              disabled
-              className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-white/10 bg-surface-2 px-3.5 text-sm text-text-2 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onClick}
+              disabled={!onClick}
+              className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-[10px] border border-white/10 bg-surface-2 px-3.5 text-sm text-text-2 enabled:hover:border-white/20 enabled:hover:text-text disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-gold-bright"
             >
               <Icon aria-hidden="true" className="size-4 text-gold" strokeWidth={1.6} />
               {label}
             </button>
           ))}
         </div>
-        <p className="mt-2.5 text-xs text-text-3">These buttons start working in later milestones.</p>
+        <p className="mt-2.5 text-xs text-text-3">Open game folder and Open logs start working in a later update.</p>
       </section>
 
       <section className="rounded-2xl border border-line bg-surface-1 px-[22px] py-[18px]">

@@ -12,6 +12,9 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader};
 
+#[cfg(debug_assertions)]
+use crate::auth::AuthError;
+use crate::auth::Auth;
 use crate::config;
 use crate::error::{Error, Result};
 use crate::game::{self, launch, GamePlan};
@@ -401,14 +404,31 @@ pub fn play(app: AppHandle, options: launch::LaunchOptions) -> Result<()> {
 
 async fn run(app: &AppHandle, launcher: &Launcher, options: launch::LaunchOptions) -> Result<()> {
     launcher.set(app, Phase::Checking);
-    // The mods first, so the game never starts with a folder that's halfway through an update.
+    // Who's playing comes first, so nothing downloads for a player who can't start the game.
+    let account = account(app).await?;
+    // The mods next, so the game never starts with a folder that's halfway through an update.
     sync_pack(app, launcher, false).await?;
     let plan = launcher.plan(false).await?;
     let missing = plan.missing();
     if !missing.is_empty() {
         install(app, &plan, missing).await?;
     }
-    start_game(app, launcher, &plan, options).await
+    start_game(app, launcher, &plan, &account, options).await
+}
+
+/// The signed-in player. Development builds fall back to an offline test player.
+async fn account(app: &AppHandle) -> Result<launch::Account> {
+    match app.state::<Auth>().launch_account(app).await {
+        Ok(Some(account)) => Ok(account),
+        #[cfg(debug_assertions)]
+        Ok(None) | Err(AuthError::NotApproved) => {
+            tracing::info!("no Minecraft login; starting with the offline dev player");
+            Ok(launch::dev_account())
+        }
+        #[cfg(not(debug_assertions))]
+        Ok(None) => Err(Error::Message("Sign in with your Microsoft account to play.".into())),
+        Err(error) => Err(Error::Message(error.to_string())),
+    }
 }
 
 /// Repair: re-checks every mod and game file against its hash and downloads what's wrong.
@@ -502,20 +522,8 @@ async fn install(app: &AppHandle, plan: &GamePlan, missing: Vec<Download>) -> Re
     download_with_progress(app, missing, 16, installing).await
 }
 
-fn account() -> Result<launch::Account> {
-    #[cfg(debug_assertions)]
-    {
-        Ok(launch::dev_account())
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        Err(Error::Message("Sign-in isn't built yet (milestone 4), so release builds can't start the game.".into()))
-    }
-}
-
 /// Starts the game and waits until it exits. Ok when it closed normally.
-async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, options: launch::LaunchOptions) -> Result<()> {
-    let account = account()?;
+async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, account: &launch::Account, options: launch::LaunchOptions) -> Result<()> {
     launcher.set(app, Phase::Launching);
     for sub in ["java", "jna", "lwjgl", "netty"] {
         tokio::fs::create_dir_all(plan.natives_dir.join(sub)).await?;
@@ -523,7 +531,7 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, optio
     tokio::fs::create_dir_all(launcher.paths.instance()).await?;
 
     let version = app.package_info().version.to_string();
-    let command = launch::build(plan, &launcher.paths, &account, &options, &version);
+    let command = launch::build(plan, &launcher.paths, account, &options, &version);
     tracing::info!("starting {} {}", command.java.display(), launch::describe(&command.args));
 
     let mut process = tokio::process::Command::new(&command.java);

@@ -8,12 +8,10 @@ import { modCount } from './data/pack'
 import { Home } from './screens/Home'
 import { Mods } from './screens/Mods'
 import { Settings } from './screens/Settings'
+import { useAccount } from './state/useAccount'
 import { useLauncher } from './state/useLauncher'
 import { useLauncherUpdate } from './state/useLauncherUpdate'
 import { useSettings } from './state/useSettings'
-
-// Sign-in arrives in milestone 4. Until then the UI shows a placeholder player.
-const PLAYER = { name: 'Player', note: 'Not signed in yet' }
 
 export function App() {
   const [tab, setTab] = useState<Tab>('home')
@@ -25,13 +23,14 @@ export function App() {
     hideWhilePlaying: settings.hideWhilePlaying
   })
   const launcherUpdate = useLauncherUpdate()
+  const account = useAccount()
   // The Mods screen still shows sample data until milestone 6; Home counts the real mods in the app.
   const count = modCount(settings.extras)
 
   return (
     <MotionConfig reducedMotion="user">
       <div className="app-backdrop flex h-full flex-col overflow-hidden">
-        <TopBar tab={tab} onTab={setTab} playerName={PLAYER.name} accountNote={PLAYER.note} />
+        <TopBar tab={tab} onTab={setTab} account={account} />
 
         <div ref={scrollArea} className="scroll-area min-h-0 flex-1 overflow-y-auto">
           {/* Each screen starts at the top, once the previous one has faded out. */}
@@ -47,18 +46,20 @@ export function App() {
               {tab === 'home' && (
                 <Home
                   launcher={launcher}
+                  account={account}
                   onPlay={play}
                   onRepair={repair}
                   onRetryUpdate={retryUpdate}
                   target={settings.launchTarget}
                   onTarget={(target) => update('launchTarget', target)}
                   modCount={launcher.demo ? count : launcher.pack.modCount}
-                  playerName={PLAYER.name}
                   onOpenMods={() => setTab('mods')}
                 />
               )}
               {tab === 'mods' && <Mods extras={settings.extras} onExtra={setExtra} modCount={count} />}
-              {tab === 'settings' && <Settings settings={settings} maxMemoryGb={maxMemoryGb} onChange={update} />}
+              {tab === 'settings' && (
+                <Settings settings={settings} maxMemoryGb={maxMemoryGb} onChange={update} account={account} onRepair={repair} />
+              )}
             </motion.main>
           </AnimatePresence>
         </div>

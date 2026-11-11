@@ -4,10 +4,12 @@ interface Props {
   playerName: string
   skinUrl?: string
   slim?: boolean
+  /** The small line under the name. */
+  note: string
 }
 
 /** The player's character, floating over a teal glow with a thin gold ring. */
-export function CharacterStage({ playerName, skinUrl, slim }: Props) {
+export function CharacterStage({ playerName, skinUrl, slim, note }: Props) {
   return (
     <section aria-label="Your character" className="flex min-w-0 max-w-[480px] flex-[1_1_360px] flex-col items-center gap-3.5">
       <div className="relative h-[500px] w-[380px] max-w-full">
@@ -32,7 +34,7 @@ export function CharacterStage({ playerName, skinUrl, slim }: Props) {
       </div>
       <div className="text-center">
         <div className="text-lg font-semibold">{playerName}</div>
-        <div className="mt-1 text-[13px] text-text-3">Skin from your Microsoft account</div>
+        <div className="mt-1 text-[13px] text-text-3">{note}</div>
       </div>
     </section>
   )

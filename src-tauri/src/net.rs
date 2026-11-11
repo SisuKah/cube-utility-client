@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-use reqwest::header::{ETAG, IF_NONE_MATCH};
+use reqwest::header::{ACCEPT, CONTENT_TYPE, ETAG, IF_NONE_MATCH};
 use reqwest::{redirect, Client, StatusCode, Url};
 use sha1::{Digest, Sha1};
 use sha2::Sha512;
@@ -36,7 +36,16 @@ const ALLOWED_HOSTS: &[&str] = &[
     "github.com",
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",
+    // Sign-in: Microsoft, Xbox Live and Minecraft, plus the player's skin
+    "login.microsoftonline.com",
+    "user.auth.xboxlive.com",
+    "xsts.auth.xboxlive.com",
+    "api.minecraftservices.com",
+    "textures.minecraft.net",
 ];
+
+/// How long a sign-in or other API request may take.
+const API_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub fn is_allowed(url: &Url) -> bool {
     let Some(host) = url.host_str() else { return false };
@@ -69,6 +78,12 @@ fn pack_origin() -> Option<&'static Url> {
 pub enum Hash {
     Sha1(String),
     Sha512(String),
+}
+
+/// An API's answer, whatever its status: sign-in has to read the bodies of 401s and 403s.
+pub struct ApiResponse {
+    pub status: StatusCode,
+    pub body: Vec<u8>,
 }
 
 /// The answer to a request for a small file that may not have changed.
@@ -192,6 +207,32 @@ impl Net {
         Ok(self.client.get(Self::checked(url)?).send().await?.error_for_status()?.text().await?)
     }
 
+    /// POSTs a form (application/x-www-form-urlencoded).
+    pub async fn post_form(&self, url: &str, fields: &[(&str, &str)]) -> Result<ApiResponse> {
+        let request = self.client.post(Self::checked(url)?).header(CONTENT_TYPE, "application/x-www-form-urlencoded").body(form_encode(fields));
+        Self::api(request).await
+    }
+
+    /// POSTs JSON, with a bearer token when there is one.
+    pub async fn post_json(&self, url: &str, body: &serde_json::Value, bearer: Option<&str>) -> Result<ApiResponse> {
+        let mut request = self.client.post(Self::checked(url)?).header(CONTENT_TYPE, "application/json").body(body.to_string());
+        if let Some(token) = bearer {
+            request = request.bearer_auth(token);
+        }
+        Self::api(request).await
+    }
+
+    /// GETs an API with a bearer token.
+    pub async fn get_api(&self, url: &str, bearer: &str) -> Result<ApiResponse> {
+        Self::api(self.client.get(Self::checked(url)?).bearer_auth(bearer)).await
+    }
+
+    async fn api(request: reqwest::RequestBuilder) -> Result<ApiResponse> {
+        let response = request.header(ACCEPT, "application/json").timeout(API_TIMEOUT).send().await?;
+        let status = response.status();
+        Ok(ApiResponse { status, body: response.bytes().await?.to_vec() })
+    }
+
     /// Fetches a small file, or just learns it hasn't changed when it still has `etag`.
     pub async fn get_if_changed(&self, url: &str, etag: Option<&str>, timeout: Duration) -> Result<Fetched> {
         let mut request = self.client.get(Self::checked(url)?).timeout(timeout);
@@ -297,6 +338,13 @@ impl Net {
     }
 }
 
+/// `a=1&b=x+y`, the way HTML forms send fields.
+pub fn form_encode(fields: &[(&str, &str)]) -> String {
+    let mut url = Url::parse("http://form.invalid/").expect("a constant, valid URL");
+    url.query_pairs_mut().extend_pairs(fields);
+    url.query().unwrap_or_default().to_string()
+}
+
 fn task_error(error: tokio::task::JoinError) -> Error {
     Error::Message(format!("a download stopped unexpectedly: {error}"))
 }
@@ -364,6 +412,25 @@ mod tests {
         assert!(!is_allowed_str("http://cdn.modrinth.com/x.jar"));
         assert!(!is_allowed_str("file:///C:/Windows/x.jar"));
         assert!(!is_allowed_str("not a url"));
+    }
+
+    #[test]
+    fn sign_in_hosts_are_allowed() {
+        for url in [
+            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+            "https://user.auth.xboxlive.com/user/authenticate",
+            "https://xsts.auth.xboxlive.com/xsts/authorize",
+            "https://api.minecraftservices.com/minecraft/profile",
+            "https://textures.minecraft.net/texture/abc",
+        ] {
+            assert!(is_allowed_str(url), "{url}");
+        }
+        assert!(!is_allowed_str("http://textures.minecraft.net/texture/abc"));
+    }
+
+    #[test]
+    fn encodes_forms() {
+        assert_eq!(form_encode(&[("scope", "XboxLive.signin offline_access"), ("redirect_uri", "http://localhost:5000")]), "scope=XboxLive.signin+offline_access&redirect_uri=http%3A%2F%2Flocalhost%3A5000");
     }
 
     #[test]

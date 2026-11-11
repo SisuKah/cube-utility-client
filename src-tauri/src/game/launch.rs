@@ -30,7 +30,7 @@ pub struct LaunchOptions {
     pub hide_while_playing: bool,
 }
 
-/// Who is playing. Milestone 4 fills this from Microsoft sign-in.
+/// Who is playing: the account from Microsoft sign-in (see `auth`).
 #[derive(Debug, Clone)]
 pub struct Account {
     pub name: String,

@@ -1,6 +1,7 @@
 // Release builds are GUI apps: no extra console window on Windows.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod auth;
 mod config;
 mod error;
 mod game;
@@ -26,6 +27,7 @@ fn main() {
             }
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_opener::init())
         .manage(update::SelfUpdate::default())
         .setup(|app| {
             let root = app.path().data_dir()?.join(config::DATA_FOLDER);
@@ -40,7 +42,10 @@ fn main() {
                 Some(url) => tracing::info!("pack: {url}"),
                 None => tracing::info!("no pack server set yet, so no mods are synced"),
             }
-            app.manage(launcher::Launcher::new(paths, net::Net::new()?, version));
+            let net = net::Net::new()?;
+            app.manage(auth::Auth::new(paths.clone(), net.clone()));
+            app.manage(launcher::Launcher::new(paths, net, version));
+            auth::start(app.handle().clone());
             launcher::start(app.handle().clone());
             update::start(app.handle().clone());
             Ok(())
@@ -55,6 +60,10 @@ fn main() {
             launcher::sync_now,
             update::update_ready,
             update::restart_to_update,
+            auth::account_state,
+            auth::sign_in,
+            auth::cancel_sign_in,
+            auth::sign_out,
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Cube Utility Client");

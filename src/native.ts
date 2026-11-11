@@ -73,6 +73,29 @@ export const launcher = {
     listen<PackInfo>('pack://info', (event) => callback(event.payload))
 }
 
+/** Who's signed in (AccountState in src-tauri/src/auth/mod.rs). */
+export type AccountState =
+  | { state: 'signedOut'; message: string | null }
+  | { state: 'checking' }
+  | { state: 'signingIn' }
+  | { state: 'signedIn'; name: string; uuid: string; skin: string | null; slim: boolean }
+  | { state: 'awaitingApproval'; gamertag: string | null }
+  | { state: 'problem'; message: string }
+  | { state: 'offline'; name: string; uuid: string; skin: string | null }
+
+/** Release builds only start the game for a signed-in player. */
+export type AccountInfo = AccountState & { signInRequired: boolean }
+
+export const account = {
+  state: () => invoke<AccountInfo>('account_state'),
+  /** Opens Microsoft's sign-in page in the player's browser. */
+  signIn: () => invoke<void>('sign_in'),
+  cancelSignIn: () => invoke<void>('cancel_sign_in'),
+  signOut: () => invoke<void>('sign_out'),
+  onState: (callback: (info: AccountInfo) => void): Promise<UnlistenFn> =>
+    listen<AccountInfo>('account://state', (event) => callback(event.payload))
+}
+
 /** A newer launcher, downloaded and waiting to be installed. */
 export interface LauncherUpdate {
   version: string

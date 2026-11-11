@@ -11,7 +11,7 @@ The full spec is in `cube-utility-client-prompt.md`.
 - [x] Milestone 1: shell and style (Tauri + Rust; Home, Mods and Settings with sample data)
 - [x] Milestone 2: install and launch Minecraft 26.3 with Fabric, in Rust (dev builds use an offline "DevPlayer" until sign-in)
 - [x] Milestone 3: the pack tool (`pack.toml` → signed manifest) and the sync engine (signature and replay checks, crash-safe updates, rollback, repair)
-- [ ] Milestone 4: Microsoft sign-in, skins and Quick Play. The Azure app is registered (client ID in `src-tauri/src/config.rs`); Mojang's approval was requested on 2026-11-11 and arrives by email.
+- [ ] Milestone 4: Microsoft sign-in, skins and Quick Play. Sign-in is built: Microsoft and Xbox sign-in work, and the token stays in the Windows Credential Manager. Minecraft's own login answers 403 until Mojang approves the Azure app (requested 2026-11-11, reply by email); then the player's skin shows and PLAY joins play.cubecraft.net with no code changes.
 - [x] Milestone 5: self-update ("Launcher update ready · Restart"), CI (checks, pack publishing, launcher releases) and the per-user installer
 - [ ] Milestone 6: Mods and Settings wired up, plus polish
 

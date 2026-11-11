@@ -1,20 +1,57 @@
 import { ArrowRight, RotateCw, Wrench } from 'lucide-react'
 import { config } from '../config'
 import { CharacterStage } from '../components/CharacterStage'
-import { PlayButton } from '../components/PlayButton'
+import { PlayButton, type ButtonOverride } from '../components/PlayButton'
 import { StripedProgress } from '../components/StripedProgress'
+import type { AccountView } from '../state/useAccount'
 import type { LaunchTarget, LauncherState, Phase } from '../state/useLauncher'
 
 interface Props {
   launcher: LauncherState
+  account: AccountView
   onPlay: () => void
   onRepair: () => void
   onRetryUpdate: () => void
   target: LaunchTarget
   onTarget: (target: LaunchTarget) => void
   modCount: number
-  playerName: string
   onOpenMods: () => void
+}
+
+/** What Home says instead while sign-in stands between the player and PLAY. */
+interface SignInGate {
+  headline: string
+  subline: string
+  button: ButtonOverride
+}
+
+/** Release builds need a signed-in player before PLAY does anything. */
+function signInGate(account: AccountView): SignInGate | null {
+  const { info } = account
+  if (!info.signInRequired) return null
+  switch (info.state) {
+    case 'signedIn':
+    case 'offline':
+      return null
+    case 'checking':
+      return { headline: 'Checking sign-in', subline: 'Making sure you’re still signed in to Microsoft.', button: { label: 'CHECKING', busy: true } }
+    case 'signingIn':
+      return { headline: 'Signing in', subline: 'Finish signing in in your browser, then come back here.', button: { label: 'SIGNING IN', busy: true } }
+    case 'awaitingApproval':
+      return {
+        headline: 'Almost ready',
+        subline: `You’re signed in${info.gamertag ? ` as ${info.gamertag}` : ''}, but Mojang hasn’t approved this launcher’s sign-in yet. PLAY works as soon as they do.`,
+        button: { label: 'WAITING FOR MOJANG' }
+      }
+    case 'problem':
+      return { headline: 'Sign in to play', subline: info.message, button: { label: 'SIGN IN', onClick: account.signIn } }
+    case 'signedOut':
+      return {
+        headline: 'Sign in to play',
+        subline: info.message ?? 'Use the Microsoft account that owns Minecraft: Java Edition.',
+        button: { label: 'SIGN IN', onClick: account.signIn }
+      }
+  }
 }
 
 const HEADLINES: Record<Phase, string> = {
@@ -60,8 +97,10 @@ function ago(ms: number): string {
   return `${days} day${days === 1 ? '' : 's'} ago`
 }
 
-export function Home({ launcher, onPlay, onRepair, onRetryUpdate, target, onTarget, modCount, playerName, onOpenMods }: Props) {
+export function Home({ launcher, account, onPlay, onRepair, onRetryUpdate, target, onTarget, modCount, onOpenMods }: Props) {
   const { phase, demo, pack } = launcher
+  // Only when nothing else is going on: downloads and errors keep their own screen.
+  const gate = phase === 'idle' || phase === 'offline' || phase === 'needsInstall' ? signInGate(account) : null
   const game = `Minecraft ${pack.minecraft}`
   const java = `Java ${pack.java ?? 25}`
 
@@ -132,16 +171,16 @@ export function Home({ launcher, onPlay, onRepair, onRetryUpdate, target, onTarg
       <section className="flex min-w-0 max-w-[540px] flex-[1_1_420px] flex-col items-start gap-[30px]">
         <div>
           <p className="text-[13px] font-bold tracking-[0.18em] text-gold">MINECRAFT {pack.minecraft} · CUBECRAFT READY</p>
-          <h1 className="mt-3.5 text-[60px] font-light leading-[66px] tracking-[-0.03em]">{HEADLINES[phase]}</h1>
+          <h1 className="mt-3.5 text-[60px] font-light leading-[66px] tracking-[-0.03em]">{gate?.headline ?? HEADLINES[phase]}</h1>
           <p
             className={`mt-3.5 max-w-[440px] text-[17px] leading-[26px] wrap-anywhere ${phase === 'error' ? 'select-text text-[#f2a3b4]' : 'text-text-2'}`}
           >
-            {sublines[phase]}
+            {gate?.subline ?? sublines[phase]}
           </p>
         </div>
 
         <div className="flex w-full flex-col items-start gap-3.5">
-          <PlayButton phase={phase} percent={launcher.percent} onPlay={onPlay} />
+          <PlayButton phase={phase} percent={launcher.percent} onPlay={onPlay} override={gate?.button} />
           <label className="flex items-center gap-2.5 text-sm text-text-2">
             Launch into
             <select
@@ -213,7 +252,20 @@ export function Home({ launcher, onPlay, onRepair, onRetryUpdate, target, onTarg
         </div>
       </section>
 
-      <CharacterStage playerName={playerName} />
+      <CharacterStage
+        playerName={account.name}
+        skinUrl={account.skin}
+        slim={account.slim}
+        note={
+          account.skin
+            ? 'Skin from your Microsoft account'
+            : account.info.state === 'signedIn'
+              ? 'Default skin'
+              : account.info.state === 'awaitingApproval'
+                ? 'Your skin shows once Mojang approves sign-in'
+                : 'Sign in to see your own skin'
+        }
+      />
     </div>
   )
 }

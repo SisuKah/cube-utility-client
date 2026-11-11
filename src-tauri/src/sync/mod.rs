@@ -25,6 +25,7 @@ use crate::paths::Paths;
 use apply::{Changes, Want};
 use fetch::{Response, TrustError, Verdict};
 pub use plan::Choices;
+pub use state::write_atomic;
 use state::SyncState;
 
 /// A manifest that passed the checks, with the exact bytes its signature covers.
