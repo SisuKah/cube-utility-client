@@ -58,10 +58,11 @@ cube-utility-client/
     jars/               my mod jars that aren't on Modrinth
     configs/            default config files for players
     changelog.md        patch notes, newest first
+  mod/                  the in-game look: a Fabric mod (Java, Gradle) shipped in the pack
   .github/workflows/    publish-pack.yml (also the 30-minute refresh), release-launcher.yml, check.yml
 ```
 
-Inside `src-tauri/src/`, keep one module per job: `config`, `net` (the download engine and host allow-list), `game` (install and launch), `sync` (the pack sync engine), `auth` (Microsoft sign-in), `settings`, `logs`. The UI calls narrow Tauri commands and listens to Tauri events for progress.
+Inside `src-tauri/src/`, keep one module per job: `config`, `net` (the download engine and host allow-list), `game` (install and launch), `sync` (the pack sync engine), `modrinth` (Browse Modrinth on the Mods screen), `auth` (Microsoft sign-in), `settings`, `logs`. The UI calls narrow Tauri commands and listens to Tauri events for progress.
 
 ### 3.2 Folders on the player's PC
 
@@ -85,6 +86,7 @@ Sign-in tokens are stored in the Windows Credential Manager through `keyring`, n
 - Download engine (`net` module): 16 files at a time for the game, 8 for pack files, retries with backoff, sha1 (Mojang) or sha512 (pack) checked while streaming, written to a temp file and renamed into place. Never bundle or rehost Minecraft or Java files.
 - Launch: build the classpath and fill the JVM and game arguments from the version JSON (replace the `${...}` placeholders and honor `rules` and `features`). Use the managed Java and the memory from settings. Default RAM is 4 GB (3 GB on PCs with less than 8 GB). The slider goes from 2 GB up to 16 GB or half the system RAM, whichever is lower. Start Java with `tokio::process::Command` without a console window.
 - The "Launch into" choice on Home: **CubeCraft** adds the Quick Play argument `--quickPlayMultiplayer play.cubecraft.net`; **Title screen** adds nothing. Check that Quick Play works on 26.3.
+- Players never see Minecraft's welcome screen: before every launch, set `onboardAccessibility:false` in the instance's `options.txt`. While the instance is unused (no `options.txt`, or one still on the welcome screen), first copy the newest `options.txt` from the player's other installs (the Minecraft Launcher and its profiles' game folders, Modrinth App, Prism Launcher, CurseForge, Lunar Client), without the resource pack choices.
 - Write the game's output to `logs/`. If the game crashes (non-zero exit code, or a new file in `crash-reports/`), show a simple "Minecraft crashed" message with **Copy log** and **Repair files**.
 - "Hide launcher while playing" is on by default: hide the window on launch, show it again when the game exits.
 - Send progress to the UI as Tauri events (for example `install://progress` with the current file, bytes done and bytes total).
@@ -273,6 +275,10 @@ Empty parts of the top bar drag the window (`data-tauri-drag-region`), and doubl
 - "Extras · you choose": the optional mods as rows with on/off switches, and a note under them: "Changes apply right away, or when you close Minecraft if it's running."
 - "Performance and libraries": one card of name chips, always on.
 - "Your extra mods" appears only when the player added jars themselves (rule 7 in 3.5).
+- Two tabs at the top right, in the same pill as the main tabs: **Installed** (everything above) and **Browse Modrinth**. Browse Modrinth is left out when the pack sets `allowExtraMods: false`.
+- **Browse Modrinth**, built into the screen (not the website): a search field and a list of mods from Modrinth's API that work with the pack's Minecraft version and loader and run on the player's side. Before the player types, it shows the most downloaded ones, leaving out mods the pack already has. Each row has the icon, name, author, a two-line description, downloads, a link to the mod's Modrinth page (opens the browser) and **Install**, or "In the pack" / "Installed". A note under the search: on CubeCraft, use only mods its rules allow.
+- **Install** picks the newest release for the pack's game (else beta, else alpha), adds the libraries it requires that the pack doesn't have, checks each file's SHA-512 from the API, and puts the jars in `mods/`. It refuses mods the pack has, mods marked incompatible with ones already there, and mods that need a pack mod the player switched off (and says which switch to turn on). Installed mods load with the next game.
+- "From Modrinth" on the Installed tab lists what the player installed there, with the libraries that came with each, and **Remove**, which also removes libraries no other mod needs (not while Minecraft runs). These are the player's own extra mods: the launcher never updates them, and if the pack later includes the same mod, the pack's copy replaces the player's. `state/modrinth-mods.json` records what came from Modrinth.
 
 **Settings**
 - Memory slider (2 GB up to 16 GB or half the system RAM, whichever is lower), with a hint that 4–8 GB is plenty.
@@ -285,6 +291,12 @@ Empty parts of the top bar drag the window (`data-tauri-drag-region`), and doubl
 - A toast when a launcher update is ready: "Launcher update ready · Restart".
 - The crash message from 3.3.
 - Tray menu: Play CubeCraft, Quit.
+
+**In the game** (the `cubeutilityclient` mod in `mod/`, shipped in the pack). Minecraft's own screens get the launcher's colours and type (section 6):
+- **Title screen:** deep space with a slowly turning spiral galaxy on the right, stars drifting at three depths (they lean a little toward the mouse) and now and then a shooting star. On the left, "CUBE UTILITY" over a gold "CLIENT" in large Manrope ExtraLight, and under it one row: a gold **Play CubeCraft** pill that joins play.cubecraft.net, then glass **Singleplayer** and **Multiplayer** pills. Small round icon buttons at the top right: Mods (only when Mod Menu is in the pack), Settings, Quit. The credits link sits at the bottom right. Nothing else: no panorama, logo, splash text, Realms or version text. Everything rises and fades in when the screen opens, and hovered buttons turn gold.
+- **Other menus:** Minecraft's buttons and sliders become glass pills with a hairline border that turns gold on hover; sliders fill gold, and labels use Manrope. Outside a world, all menu text uses Manrope and the galaxy shows behind the menus under a dark teal wash with gold header lines. In a world, other text keeps Minecraft's font, because servers draw parts of their menus with extra glyphs in it.
+- **Window:** titled "Cube Utility Client", with the app icon and a dark title bar instead of the white one.
+- The title screen is laid out at 1280 × 720 and scales with the window. In small windows, text stops shrinking at 10 px and icons at 16 px, and icons are drawn as shapes at their exact pixel size.
 
 ## 6. Style (from the reference image)
 
@@ -333,7 +345,7 @@ Use the reference image only for colors, type and mood. These tokens are my meas
 
 - **The UI can do almost nothing on its own.** Tauri capabilities (`src-tauri/capabilities/`) allow only window dragging, minimize, maximize and close, plus our own commands. Don't add the fs, shell, http or dialog plugins to the UI. Every file and network action lives in Rust, behind narrow commands that validate their input (for example, a mod id must exist in the current manifest).
 - **Content Security Policy** is set in `tauri.conf.json`. Keep it strict; the UI loads nothing remote except skin images from `textures.minecraft.net`.
-- **Download allow-list,** enforced in one place in the `net` module: Mojang (`piston-meta.mojang.com`, `piston-data.mojang.com`, `launchermeta.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net`, `textures.minecraft.net`), Fabric (`meta.fabricmc.net`, `maven.fabricmc.net`), `cdn.modrinth.com`, my GitHub Pages host, and GitHub release assets plus the CDN host they redirect to (check which one it is today). `api.modrinth.com` is for the pack tool only. Verify every hash and the manifest signature, and refuse lower serials.
+- **Download allow-list,** enforced in one place in the `net` module: Mojang (`piston-meta.mojang.com`, `piston-data.mojang.com`, `launchermeta.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net`, `textures.minecraft.net`), Fabric (`meta.fabricmc.net`, `maven.fabricmc.net`), `cdn.modrinth.com`, my GitHub Pages host, and GitHub release assets plus the CDN host they redirect to (check which one it is today). `api.modrinth.com` is for the pack tool and the Mods screen's Browse Modrinth: search and version lookups only, while the jars still come from `cdn.modrinth.com` with the SHA-512 the API lists. Verify every hash and the manifest signature, and refuse lower serials.
 - Never redistribute Minecraft or Java. Release builds require a real Microsoft account.
 - **No telemetry.** Nothing about the player leaves their PC except the requests to Microsoft, Mojang, Modrinth and GitHub that the launcher needs to work.
 - **Naming:** never put "Minecraft" in the product name or logo. Show this in About and in the installer: "NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT." Also show: "Not affiliated with CubeCraft Games."
@@ -349,6 +361,7 @@ Finish each one, check it against its test, and show me before moving on.
 4. **Sign-in, skin and Quick Play** (needs the approved Azure client ID). *Done when* a real account shows its own skin on Home and joins `play.cubecraft.net` from PLAY.
 5. **Self-update, CI and installer.** *Done when* installing 1.0.0, publishing 1.0.1 and clicking "Restart" in the app works end to end.
 6. **Mods and Settings wired up, and polish:** switches that change the synced set, settings saved on the Rust side, offline and error states, the tray menu, an accessibility pass, and the README section "How I ship an update".
+7. **The in-game look** (added after milestone 6): the `mod/` Fabric mod from "In the game" in section 5, shipped in the pack. *Done when* the game opens on the new title screen at any window size, Play CubeCraft joins the server, and the menus outside a world use the new style.
 
 ## 9. How to work
 

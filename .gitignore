@@ -23,3 +23,8 @@ pack/.cache/
 
 # Staging folder of scripts/publish-launcher.mjs
 /release/
+
+# The in-game mod's Gradle output and test runs
+/mod/.gradle/
+/mod/build/
+/mod/run/

@@ -64,7 +64,11 @@ pub fn build(plan: &GamePlan, paths: &Paths, account: &Account, options: &Launch
     let platform = Platform::current();
     let features = Features { quick_play_multiplayer: options.target == LaunchTarget::Cubecraft };
     let separator = if cfg!(windows) { ";" } else { ":" };
-    let classpath = plan.classpath.iter().map(|p| text(p)).collect::<Vec<_>>().join(separator);
+    // Each jar by its real location. Fabric compares this list with the paths Java resolves, and
+    // loads its own classes twice (then crashes) when a junction or Windows' folder redirection
+    // makes them differ. Resolving only the data folder isn't enough: files below it can be
+    // redirected somewhere else.
+    let classpath = plan.classpath.iter().map(|p| text(&crate::paths::real_path(p))).collect::<Vec<_>>().join(separator);
     let game_dir = paths.instance();
 
     let vars: HashMap<&str, String> = HashMap::from([
@@ -170,6 +174,23 @@ mod tests {
         assert!(cmd.args.contains(&"-DFabricMcEmu= net.minecraft.client.main.Main ".to_string()));
         let main = cmd.args.iter().position(|a| a == "net.fabricmc.loader.impl.launch.knot.KnotClient").unwrap();
         assert_eq!(cmd.args[main + 1..], ["--username", "Steve", "--accessToken", "secret-token"]);
+    }
+
+    #[test]
+    fn classpath_names_each_jar_by_its_real_location() {
+        let dir = std::env::temp_dir().join(format!("cuc-classpath-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let jar = dir.join("a.jar");
+        std::fs::write(&jar, b"").unwrap();
+        let mut plan = plan();
+        // A roundabout spelling of an existing jar, the way a junction or folder redirection
+        // gives one.
+        plan.classpath = vec![dir.join(".").join("a.jar")];
+        let cmd = build(&plan, &Paths::new(PathBuf::from("C:/data")), &account(), &options(LaunchTarget::Title), "1.0.0");
+        let cp = cmd.args.iter().position(|a| a == "-cp").unwrap();
+        assert_eq!(cmd.args[cp + 1], text(&crate::paths::real_path(&jar)));
+        assert!(!cmd.args[cp + 1].contains(r"\.\") && !cmd.args[cp + 1].starts_with(r"\\?\"));
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

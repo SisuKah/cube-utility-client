@@ -1,6 +1,8 @@
 // Sample data for the browser preview (`npm run dev:web`), where there's no Rust side.
 // The app shows the real pack from the signed manifest instead.
 
+import type { ModrinthPage } from '../native'
+
 export const pack = {
   version: '2026.11.10-1',
   minecraft: '26.3',
@@ -134,4 +136,20 @@ export type ExtrasState = Record<string, boolean>
 
 export function defaultExtras(): ExtrasState {
   return Object.fromEntries(extraMods.map((m) => [m.id, m.defaultOn]))
+}
+
+/** Browse Modrinth in the browser preview: made-up mods, so nothing real is implied. */
+export const sampleModrinthPage: ModrinthPage = {
+  minecraft: pack.minecraft,
+  offset: 0,
+  nextOffset: 6,
+  total: 6,
+  hits: [
+    { projectId: 'demo-shaders', title: 'Sample Shaders', author: 'someone', description: 'Soft shadows, waving leaves and better water. Needs a library, which installs with it.', iconUrl: null, downloads: 12_400_000, status: 'available' },
+    { projectId: 'demo-sodium', title: 'Sodium', author: 'someone', description: 'Already part of the pack, so it shows as included.', iconUrl: null, downloads: 98_000_000, status: 'inPack' },
+    { projectId: 'demo-hud', title: 'Sample HUD', author: 'someone else', description: 'Shows your coordinates, the time and your ping in a corner of the screen.', iconUrl: null, downloads: 3_200_000, status: 'available' },
+    { projectId: 'demo-sounds', title: 'Sample Sounds', author: 'a third person', description: 'Quieter footsteps and clearer menu clicks.', iconUrl: null, downloads: 845_000, status: 'available' },
+    { projectId: 'demo-chat', title: 'Sample Chat Heads', author: 'someone', description: 'Puts a tiny player head next to every chat message.', iconUrl: null, downloads: 2_100_000, status: 'available' },
+    { projectId: 'demo-capes', title: 'Sample Capes', author: 'someone else', description: 'Shows capes from other cape mods.', iconUrl: null, downloads: 410_000, status: 'available' }
+  ]
 }

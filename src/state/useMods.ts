@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { alwaysOn, defaultExtras, extraMods, ownMods } from '../data/pack'
-import { inApp, launcher, type ModsView } from '../native'
+import { inApp, launcher, modrinth, type ModsView } from '../native'
 
 export interface ModsState {
   view: ModsView | null
   /** Switches an optional mod on or off. */
   toggle: (id: string, on: boolean) => void
   error: string
+  /** Removes a mod installed from Modrinth, with the libraries only it needed. */
+  remove: (projectId: string) => void
+  /** Mods being removed right now. */
+  removing: string[]
+  removeError: string
 }
 
 /** The Mods screen's data: the installed pack in the app, sample data in the browser preview. */
@@ -48,7 +53,19 @@ function useAppMods(): ModsState {
     })
   }, [])
 
-  return { view, toggle, error }
+  const [removing, setRemoving] = useState<string[]>([])
+  const [removeError, setRemoveError] = useState('')
+  const remove = useCallback((projectId: string) => {
+    setRemoveError('')
+    setRemoving((current) => [...current, projectId])
+    // The list reloads on its own once Rust reports the mods folder changed.
+    modrinth
+      .remove(projectId)
+      .catch((reason: unknown) => setRemoveError(String(reason)))
+      .finally(() => setRemoving((current) => current.filter((id) => id !== projectId)))
+  }, [])
+
+  return { view, toggle, error, remove, removing, removeError }
 }
 
 function useDemoMods(): ModsState {
@@ -65,12 +82,13 @@ function useDemoMods(): ModsState {
       needs: mod.needs ?? []
     })),
     always: alwaysOn,
+    modrinth: [],
     playerJars: [],
     disabledJars: [],
     allowExtraMods: true
   }
   const toggle = useCallback((id: string, on: boolean) => setEnabled((current) => ({ ...current, [id]: on })), [])
-  return { view, toggle, error: '' }
+  return { view, toggle, error: '', remove: () => {}, removing: [], removeError: '' }
 }
 
 /** How many mods the view installs: own, always-on, the extras that are on and their libraries. */

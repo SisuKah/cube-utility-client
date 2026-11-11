@@ -7,6 +7,7 @@ mod error;
 mod game;
 mod launcher;
 mod logs;
+mod modrinth;
 mod mods;
 mod net;
 mod paths;
@@ -69,6 +70,10 @@ fn main() {
             launcher::mods_view,
             launcher::game_log,
             launcher::open_folder,
+            modrinth::modrinth_search,
+            modrinth::modrinth_install,
+            modrinth::modrinth_remove,
+            modrinth::open_modrinth_page,
             settings::get_settings,
             settings::update_settings,
             update::update_ready,

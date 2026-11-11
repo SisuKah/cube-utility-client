@@ -15,6 +15,7 @@ mods = [
   { id = "cubeutility", name = "Cube Utility",      file = "jars/cube-utility-1.7.0+mc26.1-26.3.jar", group = "own" },
   { id = "ewoptimizer", name = "Eggwars Optimizer", file = "jars/eggwars-optimizer-1.1.0.jar",         group = "own" },
   { id = "armorhud",    name = "Armor Dura HUD",    file = "jars/armor-dura-hud-1.0.0.jar",            group = "own" },
+  { id = "cubeutilityclient", name = "Cube Utility Client", file = "jars/cube-utility-client-1.0.0+mc26.3.jar", group = "own" },
 
   # My mods on Modrinth: always follow my newest 26.3 release
   { modrinth = "cubecraft-autovote",   version = "latest", group = "own" },

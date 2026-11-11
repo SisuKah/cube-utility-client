@@ -168,6 +168,32 @@ impl Launcher {
         self.playing.load(Ordering::SeqCst)
     }
 
+    /// The installed pack.
+    pub fn installed_manifest(&self) -> Option<Arc<Manifest>> {
+        lock(&self.manifest).clone()
+    }
+
+    pub fn paths(&self) -> &Paths {
+        &self.paths
+    }
+
+    pub fn net(&self) -> &Net {
+        &self.net
+    }
+
+    /// Jars came or went outside a sync (installs from Modrinth): the Mods screen reloads.
+    pub fn note_extras(&self, app: &AppHandle, added: &[String], removed: &[String]) {
+        self.update_pack(app, |pack| {
+            pack.extra_mods.retain(|path| !removed.contains(path));
+            for path in added {
+                if !pack.extra_mods.contains(path) {
+                    pack.extra_mods.push(path.clone());
+                }
+            }
+            pack.extra_mods.sort();
+        });
+    }
+
     fn set(&self, app: &AppHandle, phase: Phase) {
         *lock(&self.phase) = phase.clone();
         let _ = app.emit(STATE_EVENT, phase);
@@ -365,7 +391,15 @@ async fn sync_pack(app: &AppHandle, launcher: &Launcher, repair: bool) -> Result
     if prepared.has_changes() {
         launcher.set(app, Phase::Syncing { done_bytes: 0, total_bytes: 0, current: "Applying the update".into() });
     }
-    let report = launcher.sync.finish(prepared).await?;
+    let mut report = launcher.sync.finish(prepared).await?;
+    // A mod the player installed from Modrinth that the pack now has itself: the pack's copy wins.
+    if let Some(manifest) = report.manifest.clone() {
+        let dropped = crate::modrinth::drop_pack_duplicates(&launcher.paths, &manifest).await;
+        if !dropped.is_empty() {
+            report.extras.retain(|path| !dropped.contains(path));
+            report.changed = true;
+        }
+    }
     launcher.take_report(app, &report, problem);
     Ok(report.changed)
 }
@@ -442,7 +476,8 @@ pub fn set_mod_enabled(app: AppHandle, id: String, enabled: bool) -> Result<()> 
 pub fn mods_view(launcher: tauri::State<'_, Launcher>) -> crate::mods::ModsView {
     let manifest = lock(&launcher.manifest).clone();
     let pack = launcher.pack_info();
-    crate::mods::build(manifest.as_deref(), &launcher.sync.choices(), &launcher.sync.updated_from(), pack.extra_mods, pack.disabled_mods)
+    let from_modrinth = crate::modrinth::installed(&launcher.paths);
+    crate::mods::build(manifest.as_deref(), &launcher.sync.choices(), &launcher.sync.updated_from(), pack.extra_mods, pack.disabled_mods, &from_modrinth)
 }
 
 /// The end of the last game log, for "Copy log" after a crash.
@@ -658,6 +693,29 @@ async fn install(app: &AppHandle, plan: &GamePlan, missing: Vec<Download>) -> Re
     download_with_progress(app, missing, 16, installing).await
 }
 
+/// Straight to the title screen: Minecraft's welcome screen is marked as done, and on the first
+/// launch the player's settings come over from the Minecraft they already play. A problem here
+/// never stops the game from starting.
+async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
+    let paths = launcher.paths.clone();
+    let (appdata, home) = (app.path().data_dir().ok(), app.path().home_dir().ok());
+    let prepared = tokio::task::spawn_blocking(move || {
+        let others = match (appdata, home) {
+            (Some(appdata), Some(home)) => game::options::find_others(&appdata, &home),
+            _ => Vec::new(),
+        };
+        game::options::prepare(&paths, &others)
+    })
+    .await;
+    match prepared {
+        Ok(Ok(game::options::Prepared::Imported(from))) => tracing::info!("brought the player's Minecraft settings over from {from}"),
+        Ok(Ok(game::options::Prepared::SkippedWelcome)) => tracing::info!("marked Minecraft's welcome screen as done"),
+        Ok(Ok(game::options::Prepared::Unchanged)) => {}
+        Ok(Err(error)) => tracing::warn!("couldn't prepare options.txt ({error}); Minecraft may show its welcome screen"),
+        Err(error) => tracing::warn!("couldn't prepare options.txt ({error})"),
+    }
+}
+
 /// Starts the game and waits until it exits. Ok when it closed normally.
 async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, account: &launch::Account, options: launch::LaunchOptions) -> Result<()> {
     launcher.set(app, Phase::Launching);
@@ -665,6 +723,7 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
         tokio::fs::create_dir_all(plan.natives_dir.join(sub)).await?;
     }
     tokio::fs::create_dir_all(launcher.paths.instance()).await?;
+    prepare_options(app, launcher).await;
 
     let version = app.package_info().version.to_string();
     let command = launch::build(plan, &launcher.paths, account, &options, &version);

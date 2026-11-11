@@ -1,0 +1,6 @@
+{
+  "providers": [
+    { "type": "ttf", "file": "cubeutilityclient:manrope-extralight.ttf", "size": 104, "oversample": 1.0 },
+    { "type": "reference", "id": "minecraft:default" }
+  ]
+}

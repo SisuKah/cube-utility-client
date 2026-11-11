@@ -33,6 +33,8 @@ const ALLOWED_HOSTS: &[&str] = &[
     "maven.fabricmc.net",
     // Pack mods: Modrinth, and my jars as GitHub release assets (which redirect to these)
     "cdn.modrinth.com",
+    // Modrinth's search, for the Mods screen's Browse Modrinth
+    "api.modrinth.com",
     "github.com",
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",
@@ -225,6 +227,11 @@ impl Net {
     /// GETs an API with a bearer token.
     pub async fn get_api(&self, url: &str, bearer: &str) -> Result<ApiResponse> {
         Self::api(self.client.get(Self::checked(url)?).bearer_auth(bearer)).await
+    }
+
+    /// GETs a public API that needs no sign-in, like Modrinth's search.
+    pub async fn get_public(&self, url: &str) -> Result<ApiResponse> {
+        Self::api(self.client.get(Self::checked(url)?)).await
     }
 
     async fn api(request: reqwest::RequestBuilder) -> Result<ApiResponse> {

@@ -68,14 +68,66 @@ export interface ExtraCard {
   needs: string[]
 }
 
+/** A mod the player installed from Modrinth, or a library that came with one. */
+export interface ModrinthCard {
+  projectId: string
+  name: string
+  version: string
+  iconUrl: string | null
+  /** The player chose it. Libraries that came with a mod they chose aren't. */
+  picked: boolean
+  /** For libraries: the mods they came with. */
+  neededBy: string[]
+}
+
 export interface ModsView {
   installed: boolean
   own: ModCard[]
   extras: ExtraCard[]
   always: string[]
+  modrinth: ModrinthCard[]
+  /** Jars the player added to the mods folder by hand. */
   playerJars: string[]
   disabledJars: string[]
   allowExtraMods: boolean
+}
+
+/** One Modrinth search result (src-tauri/src/modrinth.rs). */
+export interface ModrinthHit {
+  projectId: string
+  title: string
+  author: string
+  description: string
+  iconUrl: string | null
+  downloads: number
+  status: 'available' | 'installed' | 'inPack'
+}
+
+export interface ModrinthPage {
+  hits: ModrinthHit[]
+  /** How many mods match in all. */
+  total: number
+  offset: number
+  /** Where the next page starts (the popular list leaves out mods the pack already has). */
+  nextOffset: number
+  /** The Minecraft version the results are for. */
+  minecraft: string
+}
+
+export interface InstallOutcome {
+  /** What was downloaded: the mod first, then the libraries it needed. */
+  installed: string[]
+  /** Minecraft is running, so the mod loads the next time it starts. */
+  nextLaunch: boolean
+}
+
+/** Browse Modrinth on the Mods screen: search, install into the mods folder, remove. */
+export const modrinth = {
+  search: (query: string, offset: number) => invoke<ModrinthPage>('modrinth_search', { query, offset }),
+  install: (projectId: string) => invoke<InstallOutcome>('modrinth_install', { projectId }),
+  remove: (projectId: string) => invoke<void>('modrinth_remove', { projectId }),
+  /** Opens the mod's page on modrinth.com in the player's browser. */
+  openPage: (projectId: string) => invoke<void>('open_modrinth_page', { projectId })
 }
 
 /** What Rust knows about the installed pack (PackInfo in src-tauri/src/launcher.rs). */

@@ -14,6 +14,7 @@ The full spec is in `cube-utility-client-prompt.md`.
 - [ ] Milestone 4: Microsoft sign-in, skins and Quick Play. Sign-in is built: Microsoft and Xbox sign-in work, and the token stays in the Windows Credential Manager. Minecraft's own login answers 403 until Mojang approves the Azure app (requested 2026-11-11, reply by email); then the player's skin shows and PLAY joins play.cubecraft.net with no code changes.
 - [x] Milestone 5: self-update ("Launcher update ready · Restart"), CI (checks, pack publishing, launcher releases) and the per-user installer
 - [x] Milestone 6: the Mods switches install and remove mods, settings are saved by the launcher, a beta channel, "Minecraft crashed" with Copy log, the tray menu (Play CubeCraft, Quit), and an accessibility pass
+- [x] Milestone 7: the in-game look, a Fabric mod in the pack: a space title screen with Play CubeCraft, the launcher's style in Minecraft's menus, and a dark game window with the client's name and icon
 
 ## Requirements
 
@@ -59,6 +60,24 @@ git commit -am "Cube Utility 1.8.0" && git push
 - The newest section of `pack/changelog.md` becomes "What's new" on Home. If you don't add a section, the notes describe what changed, with Modrinth's changelog for mods marked `version = "latest"`.
 - Every 30 minutes the same workflow re-checks mods marked `version = "latest"` (my own Modrinth projects) and publishes when one has a new release, so those reach players with no steps at all. GitHub pauses scheduled workflows after 60 days without commits: if that happens, open the repo's **Actions** tab, pick **Publish pack** and click **Enable workflow**.
 - To roll players back to an older pack: `gh workflow run "Publish pack" -f rollback_to=2026.11.11-1` (or **Run workflow** on the Actions tab). It republishes that release's files under a new number. `pack.toml` still lists the newer mods, so change it before the next push.
+
+### The in-game look: `mod/`
+
+Minecraft's own screens get the launcher's style from a small Fabric mod in `mod/`, shipped in the pack as `cubeutilityclient`: the title screen (a turning galaxy, **Play CubeCraft**, Singleplayer, Multiplayer, and round Mods, Settings and Quit buttons), glass buttons and sliders with Manrope labels in every menu, Manrope text in the menus outside a world, the window's title, icon and dark title bar. After changing it, build the jar and add it like my other mods:
+
+```bash
+cd mod && ./gradlew build
+```
+```bash
+npm run pack:add -- mod/build/libs/cube-utility-client-1.0.0+mc26.3.jar --notes "- What changed"
+```
+
+Then commit and push as above. Raise `mod_version` in `mod/gradle.properties` for each release, so the jar's name changes with it.
+
+- Gradle starts with any Java 17 or newer and downloads Java 25 for the build by itself (`mod/gradle/gradle-daemon-jvm.properties`).
+- `./gradlew runClient` opens a test game with only this mod (offline, no launcher) in a 1280 × 720 window. `-Pwidth=854 -Pheight=480` tries Minecraft's default window size, and `-Ppreview=options` (or `video`, `multiplayer`, `worlds`) opens that menu straight away.
+- The textures (star glows, the galaxy's dust lane, the menu backgrounds) are drawn by `mod/tools/GenTextures.java`; after changing it, run `./gradlew genTextures`. The icons are shapes in `LineIcon.java`, drawn at their exact pixel size.
+- Manrope comes from Google Fonts under the SIL Open Font License (`mod/src/main/resources/licenses/`). Minecraft draws font glyphs without smoothing, so every text size the screens use has its own font definition in `assets/cubeutilityclient/font/`, each drawing one of three Manrope weights at exactly that size.
 
 ### A beta first (optional)
 
@@ -126,18 +145,21 @@ Edit `pack.toml`, run `npm run pack:build`, and the running launcher picks it up
 - `crates/manifest/`: the manifest format, its checks, and ed25519 signing, shared by the launcher and the pack tool.
 - `tools/pack/`: the pack tool behind the `pack:*` scripts.
 - `pack/`: `pack.toml`, my jars (`jars/`), default configs (`configs/`) and `changelog.md`. `out/` (the built manifest) and `.cache/` (downloaded Modrinth jars) aren't committed.
+- `mod/`: the in-game look, a Fabric mod (Java, Gradle). `screen/` has the title screen and its buttons, `render/` the drawing helpers and the menu style, `space/` the galaxy, `window/` the title bar and icon, and `mixin/` the hooks into Minecraft.
 - `app-icon.svg`: the source for the app icons (`npx tauri icon app-icon.svg`).
 
 ## On the player's PC
 
-Everything lives in `%APPDATA%\.cubeutilityclient`: `shared/` (Minecraft, libraries, assets, Java), `instance/` (the game folder with `mods/`), `cache/` (pack files by hash, so rollbacks don't download again), `state/` (the installed manifest, `sync-state.json`, `mod-choices.json`, `settings.json`) and `logs/` (the launcher's log and `game.log`).
+Everything lives in `%APPDATA%\.cubeutilityclient`: `shared/` (Minecraft, libraries, assets, Java), `instance/` (the game folder with `mods/`), `cache/` (pack files by hash, so rollbacks don't download again), `state/` (the installed manifest, `sync-state.json`, `mod-choices.json`, `modrinth-mods.json`, `settings.json`) and `logs/` (the launcher's log and `game.log`).
 
 - Updates never touch files while the game runs; they apply when it closes. The same goes for the switches on the Mods screen: they install or remove a mod right away, or when Minecraft closes.
 - New files are copied in under temp names first, and the state lists every file before anything is swapped, so a crash halfway is finished by the next sync.
 - Jars players add themselves stay (listed as extra mods) while the pack has `allowExtraMods = true`.
+- **Browse Modrinth** on the Mods screen searches Modrinth for mods that work with the pack's Minecraft and Fabric version, and installs one with a click: the newest release, the libraries it needs, each file checked against Modrinth's SHA-512, straight into `mods/`. They show under **From Modrinth** with a **Remove** button. They're the player's own extra mods, so the launcher doesn't update them, and if the pack later includes the same mod, the pack's copy replaces theirs. `state/modrinth-mods.json` records what came from Modrinth. The tab is hidden when the pack sets `allowExtraMods = false`.
 - **Repair files** (in Settings, and shown when the game fails to start) re-hashes every mod and game file and downloads what's damaged.
 - When Minecraft crashes, Home says so and offers **Copy log** (the end of `game.log`) for asking someone for help.
 - The tray icon has **Play CubeCraft** and **Quit**; clicking it brings the launcher back while it hides during play.
+- Minecraft opens straight on its title screen: before every launch the launcher marks the game's welcome screen (narrator, accessibility, language) as done. On the first launch it also copies the player's settings from the Minecraft they already play, whichever of the Minecraft Launcher (and its profiles), Modrinth App, Prism Launcher, CurseForge or Lunar Client was used last: keybinds, video, sound and language, but not resource pack choices. A file it replaces is kept as `state/options-before-import.txt`.
 
 ## Notes
 
@@ -145,3 +167,5 @@ Everything lives in `%APPDATA%\.cubeutilityclient`: `shared/` (Minecraft, librar
 - The window is frameless. Empty parts of the top bar drag it (`data-tauri-drag-region`), and the minimize, maximize and close buttons are part of the UI.
 - Release builds sync the pack from GitHub Pages: https://sisukah.github.io/cube-utility-client/stable/manifest.json (`PACK_BASE_URL` in `src-tauri/src/config.rs`). Debug builds use the local `pack:serve` instead.
 - Launcher updates come from `releases/latest/download/latest.json` (`plugins.updater` in `src-tauri/tauri.conf.json`), so pack releases are never marked "latest".
+- In a world, menu text keeps Minecraft's own font (only buttons and sliders change), because servers like CubeCraft draw parts of their menus with extra glyphs in that font. Sodium's video settings keep Sodium's own look.
+- The dark title bar needs Windows 10 version 1809 or newer. Its exact colours (instead of Windows' dark grey) need Windows 11.

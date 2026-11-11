@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.cubeutilityclient.mixin",
+  "compatibilityLevel": "JAVA_${java_version}",
+  "client": [
+    "AbstractButtonMixin",
+    "AbstractSliderButtonMixin",
+    "FontMixin",
+    "GuiMixin",
+    "MinecraftMixin",
+    "ScreenMixin",
+    "WindowMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

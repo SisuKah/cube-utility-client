@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "cubeutilityclient",
+  "version": "${version}",
+  "name": "Cube Utility Client",
+  "description": "The Cube Utility Client look: a space title screen, restyled menus and a dark window.",
+  "icon": "assets/cubeutilityclient/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.cubeutilityclient.CubeUtilityClient"]
+  },
+  "mixins": [
+    {
+      "config": "cubeutilityclient.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=${java_version}"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

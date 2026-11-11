@@ -1,0 +1,82 @@
+plugins {
+    // Minecraft 26.x ships with Mojang's own names, so the non-remapping flavour of Loom is used,
+    // the same as in Cube Utility.
+    id 'net.fabricmc.fabric-loom' version '1.19.3'
+}
+
+version = "${project.mod_version}+mc${project.minecraft_version}"
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    mavenCentral()
+    // Mod Menu, for the Mods button on the title screen.
+    maven {
+        name = 'Terraformers'
+        url = 'https://maven.terraformersmc.com/releases/'
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Optional: only the Mods button touches it, and only when Mod Menu is installed.
+    compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+}
+
+// `./gradlew runClient` opens a test game at the size the menus were designed at.
+// `-Ppreview=options` (or video, multiplayer, worlds) opens that menu straight away.
+loom {
+    runs {
+        client {
+            // -Pwidth=854 -Pheight=480 tries Minecraft's default window size.
+            programArgs '--width', "${project.findProperty('width') ?: '1280'}", '--height', "${project.findProperty('height') ?: '720'}"
+            vmArg "-Dcubeutilityclient.preview=${project.findProperty('preview') ?: ''}"
+        }
+    }
+}
+
+def javaVersion = Integer.parseInt(project.java_version)
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release = javaVersion
+    it.options.compilerArgs += ['-Xlint:-deprecation', '-Xlint:-removal']
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
+}
+
+// `./gradlew genTextures` redraws the GUI textures with tools/GenTextures.java, using the same Java.
+tasks.register('genTextures', Exec) {
+    group = 'build setup'
+    description = 'Redraws the GUI textures with tools/GenTextures.java.'
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(javaVersion) }
+    doFirst { executable = launcher.get().executablePath.asFile.absolutePath }
+    args 'tools/GenTextures.java', 'src/main/resources/assets/cubeutilityclient/textures/gui'
+}
+
+processResources {
+    def props = [
+            'version'          : project.version,
+            'minecraft_version': project.minecraft_version,
+            'loader_version'   : project.loader_version,
+            'java_version'     : project.java_version,
+    ]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching(['fabric.mod.json', '*.mixins.json']) {
+        expand props
+    }
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
