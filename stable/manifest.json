@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "serial": 1,
-  "packVersion": "2026.11.11-1",
+  "serial": 2,
+  "packVersion": "2026.11.11-2",
   "channel": "stable",
-  "releasedAt": "2026-11-11T08:18:05Z",
+  "releasedAt": "2026-11-11T16:29:20Z",
   "minLauncherVersion": "1.0.0",
   "minecraft": "26.3",
   "loader": {
@@ -17,8 +17,8 @@
   "quickPlay": "play.cubecraft.net",
   "allowExtraMods": true,
   "notes": {
-    "title": "Cube Utility 1.7.0 and 24 more mods",
-    "markdown": "- Cube Utility 1.7.0, Eggwars Optimizer 1.1.0 and Armor Dura HUD 1.0.0.\n- CubeCraft AutoVote and Level + Rank, always on their newest release.\n- Sodium, Lithium and the rest of the Eggwars Optimized performance set.\n- Optional extras you can switch on or off: Zoomify, More Chat History, Cubes Without Borders, Freelook and Variants CIT."
+    "title": "Cube Utility Client 1.0.0+mc26.3",
+    "markdown": "- New look in the game itself: a space title screen with a slowly turning galaxy, the client's teal and gold in every menu, and a dark game window with the client's name and icon."
   },
   "files": [
     {
@@ -28,7 +28,7 @@
       "description": "An all-in-one, client-side toolkit for CubeCraft: game timer, map and team layout, build limit, bridge lengths, spawn protection, item cooldowns, durability and drop protection, hidden chest finder, party tools, auto GG and auto play, chat alerts, stats, leaderboards, Discord presence, automatic clips through OBS and voting. Every feature can be switched on and off on its own.",
       "group": "own",
       "path": "mods/cube-utility-1.7.0+mc26.1-26.3.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-1/cube-utility-1.7.0-mc26.1-26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-2/cube-utility-1.7.0-mc26.1-26.3.jar",
       "sha512": "a80e8f18f07b1033d7cd0f822e5c6b3d75ab1e3e876f1207f232ace3b0e87c162f96342e8f0c6772a05fd78d5751bf5f3aae5ea0c072c08e87d98d9243ea24d0",
       "size": 676047,
       "required": true,
@@ -41,7 +41,7 @@
       "description": "Client-side tweaks for CubeCraft Eggwars: forced generator particles follow your Particles setting, dropped item stacks draw one model, duplicate chat lines stack, and shop/rank spam is cleaned up.",
       "group": "own",
       "path": "mods/eggwars-optimizer-1.1.0.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-1/eggwars-optimizer-1.1.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-2/eggwars-optimizer-1.1.0.jar",
       "sha512": "007dcbc909557adeaa750cbbb447151e4dfc9fb27184c94f956f9c57622cf6e97388ba2b0e98e75bdb5c416b7a548ba07589d4e7223ca2f1704e01ef91c0f951",
       "size": 50015,
       "required": true,
@@ -54,9 +54,22 @@
       "description": "Shows your armor and how much durability it has left. Drag it anywhere from the settings (press H).",
       "group": "own",
       "path": "mods/armor-dura-hud-1.0.0.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-1/armor-dura-hud-1.0.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-2/armor-dura-hud-1.0.0.jar",
       "sha512": "f16db34d63ad2ca22c5d91dc8314222497f8ad11868fcbc26ede54ed578b7b7febf47efe33e7ffcc2a716ff415e77bf1a90729d251690f52cd11609cb35350ee",
       "size": 27276,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "cubeutilityclient",
+      "name": "Cube Utility Client",
+      "version": "1.0.0+mc26.3",
+      "description": "The Cube Utility Client look: a space title screen, restyled menus and a dark window.",
+      "group": "own",
+      "path": "mods/cube-utility-client-1.0.0+mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.11-2/cube-utility-client-1.0.0-mc26.3.jar",
+      "sha512": "fda0cbe7adfef5288b93eef87d425a9ab758bee4ed868a269d2a325c9325b808d107e8b569ba036bd6d054f73c2129d7ea197b1fb07b6fe14a45475501705ea0",
+      "size": 340934,
       "required": true,
       "defaultEnabled": true
     },
