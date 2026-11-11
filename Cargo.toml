@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["src-tauri", "crates/manifest", "tools/pack"]
+
+[profile.release]
+# Smaller, faster release builds.
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true

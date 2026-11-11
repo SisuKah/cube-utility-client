@@ -1,0 +1,12 @@
+[package]
+name = "cuc-manifest"
+version = "0.1.0"
+description = "The pack manifest format, shared by the launcher and the pack tool"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ed25519-dalek = "3"
+thiserror = "2"

@@ -1,0 +1,25 @@
+node_modules/
+dist/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Rust / Tauri
+/target/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Signing keys must never be committed: the pack key and the launcher updater key.
+*.secret
+src-tauri/updater.key
+src-tauri/updater.key.*
+
+# Pack tool: out/ is the built manifest (CI publishes it to GitHub Pages), .cache/ holds
+# downloaded Modrinth jars.
+pack/out/
+pack/.cache/
+
+# Staging folder of scripts/publish-launcher.mjs
+/release/

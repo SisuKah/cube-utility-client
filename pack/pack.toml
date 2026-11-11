@@ -1,0 +1,53 @@
+# The modpack's source of truth. `npm run pack:build` turns it into the signed manifest that
+# every launcher syncs to. Modrinth versions are version numbers for Minecraft 26.3 + Fabric;
+# "latest" follows the newest release. Optional mods can be switched on or off by players.
+
+name = "Cube Utility Client"
+channel = "stable"
+minecraft = "26.3"
+loader = { type = "fabric", version = "0.20.1" }
+java = { component = "java-runtime-epsilon", major = 25 }
+quickPlay = "play.cubecraft.net"
+allowExtraMods = true
+
+mods = [
+  # My mods that aren't on Modrinth (jars in pack/jars)
+  { id = "cubeutility", name = "Cube Utility",      file = "jars/cube-utility-1.7.0+mc26.1-26.3.jar", group = "own" },
+  { id = "ewoptimizer", name = "Eggwars Optimizer", file = "jars/eggwars-optimizer-1.1.0.jar",         group = "own" },
+  { id = "armorhud",    name = "Armor Dura HUD",    file = "jars/armor-dura-hud-1.0.0.jar",            group = "own" },
+
+  # My mods on Modrinth: always follow my newest 26.3 release
+  { modrinth = "cubecraft-autovote",   version = "latest", group = "own" },
+  { modrinth = "cubecraft-level-rank", version = "latest", group = "own" },
+
+  # Performance (same set as my Eggwars Optimized pack), pinned
+  { modrinth = "sodium",                version = "mc26.3-0.9.2-fabric",  group = "performance" },
+  { modrinth = "lithium",               version = "mc26.3-0.26.3-fabric", group = "performance" },
+  { modrinth = "immediatelyfast",       version = "1.17.1+26.3-fabric",   group = "performance" },
+  { modrinth = "entityculling",         version = "1.11.3",               group = "performance" },
+  { modrinth = "ferrite-core",          version = "9.0.0-fabric",         group = "performance" },
+  { modrinth = "dynamic-fps",           version = "3.11.10",              group = "performance" },
+  { modrinth = "krypton",               version = "0.3.2",                group = "performance" },
+  { modrinth = "sodium-extra",          version = "mc26.3-0.9.5+fabric",  group = "performance" },
+  { modrinth = "reeses-sodium-options", version = "mc26.3-2.2.5+fabric",  group = "performance" },
+
+  # Libraries and UI
+  { modrinth = "fabric-api",      version = "0.166.0+26.3",    group = "library" },
+  { modrinth = "modmenu",         version = "21.0.0",          group = "library" },
+  { modrinth = "placeholder-api", version = "3.2.0+26.3",      group = "library" },  # Mod Menu needs it
+  { modrinth = "cloth-config",    version = "26.3.159+fabric", group = "library" },
+
+  # Optional quality of life (players can switch these on or off)
+  { modrinth = "zoomify",               version = "2.17.0+mc26.3", group = "qol", optional = true, default = "on" },   # pulls in yacl + fabric-language-kotlin
+  { modrinth = "morechathistory",       version = "2.0.0",         group = "qol", optional = true, default = "on" },
+  { modrinth = "cubes-without-borders", version = "5.0.0+26.3",    group = "qol", optional = true, default = "on" },
+  { modrinth = "freelook",              version = "1.4.4",         group = "qol", optional = true, default = "off" },  # check CubeCraft's rules before defaulting this on
+  { modrinth = "variants-cit",          version = "5.8.1+26.3",    group = "qol", optional = true, default = "off" },
+]
+
+# Default config files for players, from pack/configs. "if-missing" never overwrites a
+# player's own settings; "always" keeps the file identical to the pack's copy.
+# [[configs]]
+# file = "configs/sodium-options.json"
+# path = "config/sodium-options.json"
+# policy = "if-missing"

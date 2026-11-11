@@ -1,0 +1,10 @@
+Cube Utility Client
+
+NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
+Not affiliated with CubeCraft Games.
+
+Cube Utility Client is a launcher for the Cube Utility CubeCraft modpack. It downloads Minecraft and Java from Mojang's servers and the pack's mods from Modrinth and GitHub, and keeps them up to date. You need your own Minecraft: Java Edition account to play.
+
+The launcher installs for your Windows account only and doesn't need administrator rights. It updates itself and the modpack automatically. It sends no telemetry: it only contacts Microsoft, Mojang, Fabric, Modrinth and GitHub, to do its job.
+
+The mods in the pack belong to their authors and keep their own licenses.
