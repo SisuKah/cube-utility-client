@@ -30,8 +30,10 @@ pub const PACK_SIGNING_PUBLIC_KEY: &str = "85260080024878bf1e5a0443ddbe4a5b573e0
 /// How often the launcher looks for a pack update while it's open.
 pub const PACK_CHECK_INTERVAL: Duration = if cfg!(debug_assertions) { Duration::from_secs(30) } else { Duration::from_secs(600) };
 
-/// TODO (milestone 4): client ID of the Azure app, once Mojang approves it.
-pub const AZURE_CLIENT_ID: &str = "";
+/// Client ID of the Azure app "Cube Utility Client": personal Microsoft accounts only, public
+/// client, redirect http://localhost, no secret. Mojang's review was requested on 2026-11-11
+/// (they review weekly); until it's approved, api.minecraftservices.com answers 403.
+pub const AZURE_CLIENT_ID: &str = "e4c6f3f2-d903-425b-a76b-da41cb978e67";
 
 pub const QUICK_PLAY_SERVER: &str = "play.cubecraft.net";
 
