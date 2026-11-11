@@ -4,13 +4,15 @@ A fast launcher for the Cube Utility CubeCraft modpack, written in Rust with Tau
 
 The full spec is in `cube-utility-client-prompt.md`.
 
+**Players:** download `CubeUtilityClient_<version>_x64-setup.exe` from the [newest launcher release](https://github.com/SisuKah/cube-utility-client/releases/latest) and run it. After that, the launcher and the mods update themselves. (Until sign-in arrives in milestone 4, release builds can't start the game yet.)
+
 ## Status
 
 - [x] Milestone 1: shell and style (Tauri + Rust; Home, Mods and Settings with sample data)
 - [x] Milestone 2: install and launch Minecraft 26.3 with Fabric, in Rust (dev builds use an offline "DevPlayer" until sign-in)
 - [x] Milestone 3: the pack tool (`pack.toml` → signed manifest) and the sync engine (signature and replay checks, crash-safe updates, rollback, repair)
 - [ ] Milestone 4: Microsoft sign-in, skins and Quick Play
-- [ ] Milestone 5: self-update, CI, publishing to GitHub and the installer
+- [x] Milestone 5: self-update ("Launcher update ready · Restart"), CI (checks, pack publishing, launcher releases) and the per-user installer
 - [ ] Milestone 6: Mods and Settings wired up, plus polish
 
 ## Requirements
@@ -120,4 +122,5 @@ Everything lives in `%APPDATA%\.cubeutilityclient`: `shared/` (Minecraft, librar
 
 - The first `npm run dev` compiles about 350 Rust crates and takes a few minutes. After that, rebuilds take seconds.
 - The window is frameless. Empty parts of the top bar drag it (`data-tauri-drag-region`), and the minimize, maximize and close buttons are part of the UI.
-- Release builds don't sync a pack until `PACK_BASE_URL` in `src-tauri/src/config.rs` is set (milestone 5).
+- Release builds sync the pack from GitHub Pages: https://sisukah.github.io/cube-utility-client/stable/manifest.json (`PACK_BASE_URL` in `src-tauri/src/config.rs`). Debug builds use the local `pack:serve` instead.
+- Launcher updates come from `releases/latest/download/latest.json` (`plugins.updater` in `src-tauri/tauri.conf.json`), so pack releases are never marked "latest".

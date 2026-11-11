@@ -58,7 +58,7 @@ cube-utility-client/
     jars/               my mod jars that aren't on Modrinth
     configs/            default config files for players
     changelog.md        patch notes, newest first
-  .github/workflows/    publish-pack.yml, refresh-pack.yml, release-launcher.yml
+  .github/workflows/    publish-pack.yml (also the 30-minute refresh), release-launcher.yml, check.yml
 ```
 
 Inside `src-tauri/src/`, keep one module per job: `config`, `net` (the download engine and host allow-list), `game` (install and launch), `sync` (the pack sync engine), `auth` (Microsoft sign-in), `settings`, `logs`. The UI calls narrow Tauri commands and listens to Tauri events for progress.
@@ -174,7 +174,7 @@ Make each of these a one-liner (npm scripts that call the Rust pack tool) and do
 - `npm run pack:add -- <path-to-jar> --notes "..."`: read the jar's `fabric.mod.json` id, replace the older jar of the same mod in `pack/jars/`, update `pack.toml`, add the notes to `changelog.md`.
 - `npm run pack:build`: resolve `pack.toml` to exact Modrinth versions (filtered to the pack's game version and loader), auto-add and pin required dependencies (from Modrinth's dependency data and each jar's `fabric.mod.json`), and fail with a clear message if a dependency is missing or a mod doesn't accept the game version. Then compute sha512 and size, and write and sign `pack/out/<channel>/manifest.json` (not `dist/`, which is the UI's build output).
 - **Push to `main`** with changes under `pack/` runs `publish-pack.yml`: build, upload my jars as assets of a `pack-<packVersion>` release, deploy the manifest and signature to GitHub Pages, and bump `serial` by one.
-- `refresh-pack.yml` runs every 30 minutes and on demand. It re-resolves entries marked `version = "latest"` (my own Modrinth projects) and publishes automatically when one changed, using the Modrinth changelog as the patch notes. So when I put a new version of CubeCraft AutoVote or Level + Rank on Modrinth, players get it with zero extra steps. GitHub pauses scheduled workflows after 60 days without repo activity; the README must say how to turn it back on.
+- `publish-pack.yml` also runs every 30 minutes and on demand (one workflow instead of a separate `refresh-pack.yml`). It re-resolves entries marked `version = "latest"` (my own Modrinth projects) and publishes automatically when one changed, using the Modrinth changelog as the patch notes. Pack releases are never marked "latest", because launchers find their own updates at `releases/latest/download/latest.json`. So when I put a new version of CubeCraft AutoVote or Level + Rank on Modrinth, players get it with zero extra steps. GitHub pauses scheduled workflows after 60 days without repo activity; the README must say how to turn it back on.
 - `npm run pack:rollback -- <packVersion>`: republish an older file set under a new serial.
 - `npm run release:launcher -- patch|minor`: bump the app version, tag `launcher-v*`, push. `release-launcher.yml` builds the signed installer and `latest.json` and publishes them.
 - `npm run keys:generate`: create the ed25519 pack-signing key pair, print the public key to put in `src-tauri/src/config.rs`, and tell me to save the private key as the `PACK_SIGNING_KEY` GitHub secret. Never commit a private key.
