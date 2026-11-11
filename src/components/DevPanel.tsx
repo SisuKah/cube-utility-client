@@ -40,6 +40,9 @@ export function DevPanel({ onPreview, onPreviewLauncherUpdate }: Props) {
           <button type="button" onClick={onPreviewLauncherUpdate} className={BUTTON}>
             Launcher update
           </button>
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('cuc:emote'))} className={BUTTON}>
+            Next emote
+          </button>
         </>
       )}
     </div>
