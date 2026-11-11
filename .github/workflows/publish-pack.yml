@@ -1,0 +1,114 @@
+name: Publish pack
+
+# Builds pack/pack.toml into a signed manifest and publishes it when something changed:
+# - on every push to main that touches the pack,
+# - every 30 minutes, to follow the mods marked version = "latest" on Modrinth,
+# - on demand from the Actions tab, which can also roll back to an older release.
+# The manifest goes to GitHub Pages (the gh-pages branch); my own jars go to a
+# pack-<version> release. Launchers check the manifest and sync to it.
+on:
+  push:
+    branches: [main]
+    paths: ["pack/**", "tools/pack/**", "crates/manifest/**"]
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      rollback_to:
+        description: "Roll back to this pack version (like 2026.11.11-1). Leave empty to publish pack.toml."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+# One publish at a time, so serials never collide.
+concurrency:
+  group: publish-pack
+  cancel-in-progress: false
+
+env:
+  CHANNEL: stable
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    # The 30-minute check only runs once the repo is public: launchers can't download from a
+    # private repo anyway, and private repos have few free Actions minutes.
+    if: github.event_name != 'schedule' || !github.event.repository.private
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check out what's published
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages > /dev/null; then
+            git fetch --depth 1 origin gh-pages
+            git worktree add pack/out FETCH_HEAD
+          else
+            git worktree add --orphan -b gh-pages pack/out
+          fi
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: pack-tool-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'tools/pack/**', 'crates/manifest/**') }}
+          restore-keys: pack-tool-${{ runner.os }}-
+
+      # Modrinth jars, kept between runs so the 30-minute checks don't download them again.
+      - uses: actions/cache@v6
+        with:
+          path: pack/.cache
+          key: modrinth-jars-${{ hashFiles('pack/pack.toml') }}
+          restore-keys: modrinth-jars-
+
+      - name: Build the pack
+        id: build
+        env:
+          PACK_SIGNING_KEY: ${{ secrets.PACK_SIGNING_KEY }}
+          ROLLBACK_TO: ${{ inputs.rollback_to }}
+        run: |
+          if [ -z "$PACK_SIGNING_KEY" ]; then
+            echo "::error::Add the PACK_SIGNING_KEY secret (the contents of pack/signing-key.secret)."
+            exit 1
+          fi
+          if [ -n "$ROLLBACK_TO" ]; then
+            cargo run --quiet -p pack -- rollback "$ROLLBACK_TO" --channel "$CHANNEL"
+          else
+            cargo run --quiet -p pack -- build --channel "$CHANNEL" \
+              --files-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/pack-{packVersion}"
+          fi
+          if [ -n "$(git -C pack/out status --porcelain)" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "version=$(jq -r .packVersion "pack/out/$CHANNEL/manifest.json")" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Before the manifest goes live, so launchers never see links that don't work yet.
+      - name: Release my jars
+        if: steps.build.outputs.published == 'true' && inputs.rollback_to == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          shopt -s nullglob
+          files=("pack/out/$CHANNEL/files/$VERSION"/*)
+          jq -r 'if .notes then "## \(.notes.title)\n\n\(.notes.markdown)" else "Pack release" end' \
+            "pack/out/$CHANNEL/manifest.json" > notes.md
+          # Never marked as the latest release: launchers find their own updates through that.
+          gh release create "pack-$VERSION" "${files[@]}" --title "Pack $VERSION" --notes-file notes.md --latest=false
+
+      - name: Put the manifest on GitHub Pages
+        if: steps.build.outputs.published == 'true'
+        env:
+          VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          rm -rf pack/out/*/files
+          touch pack/out/.nojekyll
+          cd pack/out
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Pack $VERSION"
+          git push origin HEAD:gh-pages

@@ -1,0 +1,6 @@
+# Text files are stored with LF line endings; binaries are never converted.
+* text=auto
+*.jar binary
+*.png binary
+*.ico binary
+*.icns binary

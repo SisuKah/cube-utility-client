@@ -1,0 +1,45 @@
+name: Check
+
+# Tests, Clippy and the TypeScript check when code changes on main or in a pull request.
+# Pack-only and text-only changes skip it (Windows runners use Actions minutes twice as fast).
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["pack/**", "**.md"]
+  pull_request:
+    paths-ignore: ["pack/**", "**.md"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: check-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: check-${{ runner.os }}-
+
+      - run: npm ci
+
+      # Type-checks the UI and builds it; the Rust side embeds the build.
+      - run: npm run build:web
+
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - run: cargo test --workspace

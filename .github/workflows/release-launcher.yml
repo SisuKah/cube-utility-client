@@ -1,0 +1,63 @@
+name: Release launcher
+
+# `npm run release:launcher -- patch` pushes a launcher-v* tag; this builds the installer,
+# signs the update files with the updater key, and publishes them with latest.json. Installed
+# launchers find it within 30 minutes and update themselves.
+on:
+  push:
+    tags: ["launcher-v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      # Room for Windows code signing later (unsigned installers trigger SmartScreen warnings).
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: release-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: release-${{ runner.os }}-
+
+      - run: npm ci
+
+      - name: Set up Windows code signing
+        if: env.WINDOWS_CERTIFICATE != ''
+        shell: bash
+        run: |
+          echo "::error::A WINDOWS_CERTIFICATE secret exists, but signing isn't set up yet: import the certificate here and set bundle.windows.certificateThumbprint (or signCommand) in tauri.conf.json."
+          exit 1
+
+      - name: Build the signed installer
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::Add the TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD secrets (npm run keys:updater makes them)."
+            exit 1
+          fi
+          npm run build
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-launcher.mjs
