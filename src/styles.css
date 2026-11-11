@@ -109,6 +109,8 @@
 @utility scroll-area {
   scrollbar-width: thin;
   scrollbar-color: rgb(255 255 255 / 0.14) transparent;
+  /* Room for the scrollbar on both sides, so screens stay centered when one appears. */
+  scrollbar-gutter: stable both-edges;
 }
 @utility stripes-light {
   background-image: repeating-linear-gradient(90deg, #c9d3d2 0 2px, transparent 2px 5px);

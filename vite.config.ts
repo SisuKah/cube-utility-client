@@ -14,7 +14,8 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
-    watch: { ignored: ['**/src-tauri/**'] }
+    // Only the UI is watched: the Rust build in target/ alone is tens of thousands of files.
+    watch: { ignored: ['**/src-tauri/**', '**/target/**', '**/crates/**', '**/tools/**', '**/pack/**'] }
   },
   envPrefix: ['VITE_', 'TAURI_ENV_'],
   // WebView2 is Chromium-based, so modern output is fine.
