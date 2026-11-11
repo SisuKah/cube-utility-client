@@ -1,0 +1,11 @@
+{
+  "configVersion": 2,
+  "enabled": false,
+  "headless": true,
+  "delayMs": 0,
+  "menuTimeoutMs": 500,
+  "choices": {
+    "team_eggwars_perk_voting": "No Perk",
+    "team_eggwars_health_voting": "Normal"
+  }
+}

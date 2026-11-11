@@ -1,0 +1,481 @@
+{
+  "version": 1,
+  "general": {
+    "hud_enabled": true,
+    "hud_scale": 100,
+    "hud_background": 45,
+    "text_shadow": true,
+    "alert_volume": 70,
+    "time_format": "clock",
+    "online_data": true,
+    "extra_addresses": "",
+    "debug": false,
+    "welcomed": true
+  },
+  "features": {
+    "spawn_protection": {
+      "enabled": true,
+      "settings": {
+        "own": "hud",
+        "end_sound": "none",
+        "others": true
+      }
+    },
+    "item_cooldowns": {
+      "enabled": true,
+      "settings": {
+        "items": "fire_charge=30, feather=10, endermite_spawn_egg=5",
+        "only_cooldown_games": true,
+        "server": true,
+        "sweep": false,
+        "ready_sound": "none"
+      }
+    },
+    "durability": {
+      "enabled": true,
+      "settings": {
+        "threshold": 10,
+        "unit": "uses",
+        "weapon": true,
+        "chat": true,
+        "action_bar": true,
+        "toast": false,
+        "sound": "break",
+        "breaks": true
+      }
+    },
+    "build_limit": {
+      "enabled": true,
+      "settings": {
+        "warn_at": 3,
+        "action_bar": true,
+        "sound": "bass",
+        "hud_only_near": false,
+        "learn": true,
+        "limit_message": "build limit, build height, height limit, build any higher, build this high, build that high, build so high, place blocks this high, place blocks that high, place blocks any higher, too high to build, maximum build"
+      }
+    },
+    "bridge_check": {
+      "enabled": true,
+      "settings": {
+        "warn": true,
+        "sound": "bass",
+        "spare": 0,
+        "aim": true,
+        "announce": true,
+        "not_counted": "tnt, obsidian, chest, ender_chest, ladder, cobweb, crafting_table, dragon_egg",
+        "everywhere": false
+      }
+    },
+    "resources": {
+      "enabled": true,
+      "settings": {
+        "items": "iron_ingot, gold_ingot, diamond, emerald",
+        "where": "games",
+        "layout": "column",
+        "hide_zero": true,
+        "gains": true
+      }
+    },
+    "drop_protection": {
+      "enabled": true,
+      "settings": {
+        "weapons": true,
+        "bows": false,
+        "tools": false,
+        "armour": false,
+        "enchanted": false,
+        "extra": "",
+        "skyblock": false,
+        "inventories": false,
+        "window": 700
+      }
+    },
+    "coach": {
+      "enabled": true,
+      "settings": {
+        "ring": false,
+        "ring_size": 18,
+        "edge_label": true,
+        "push_warning": true,
+        "egg_line": true,
+        "start_tip": true,
+        "final_life": false,
+        "sounds": true,
+        "outside_games": false
+      }
+    },
+    "clutch_cues": {
+      "enabled": true,
+      "settings": {
+        "pearl_cue": true,
+        "pearl_tip": true,
+        "low_hp_cue": true,
+        "low_hp_at": 10,
+        "sounds": true,
+        "outside_games": false
+      }
+    },
+    "afk_alarm": {
+      "enabled": false,
+      "settings": {
+        "sound": false,
+        "volume": 100,
+        "banner": false,
+        "flash_taskbar": false
+      }
+    },
+    "supply_hud": {
+      "enabled": true,
+      "settings": {
+        "crosshair": true,
+        "warnings": true,
+        "low": 16,
+        "sounds": true,
+        "outside": false
+      }
+    },
+    "shop_discount": {
+      "enabled": true,
+      "settings": {
+        "next_tier": true,
+        "chat": true
+      }
+    },
+    "auto_gg": {
+      "enabled": false,
+      "settings": {
+        "on_win": true,
+        "on_loss": true,
+        "on_elimination": false,
+        "messages": "Good Game! :D",
+        "delay": 900,
+        "min_game": 30
+      }
+    },
+    "auto_play": {
+      "enabled": false,
+      "settings": {
+        "after_win": true,
+        "after_loss": true,
+        "delay": 4000,
+        "party": "leader_only",
+        "sneak_cancels": true
+      }
+    },
+    "auto_kit": {
+      "enabled": false,
+      "settings": {
+        "delay": 2,
+        "announce": true,
+        "offer": true
+      }
+    },
+    "game_timer": {
+      "enabled": true,
+      "settings": {
+        "countdown": true,
+        "result": true
+      }
+    },
+    "map_info": {
+      "enabled": true,
+      "settings": {
+        "chat_on_map": true,
+        "chat_on_team": true,
+        "auto_share": false
+      }
+    },
+    "map_brief": {
+      "enabled": true,
+      "settings": {
+        "after_start": 6
+      }
+    },
+    "hidden_chest": {
+      "enabled": true,
+      "settings": {
+        "radius": 8,
+        "beam": true,
+        "announce": true,
+        "sound": "chime"
+      }
+    },
+    "chat_alerts": {
+      "enabled": true,
+      "settings": {
+        "mentions": true,
+        "keywords": "",
+        "mention_sound": "pling",
+        "friends": true,
+        "friend_sound": "chime",
+        "party": false,
+        "party_sound": "bell",
+        "game_start": true,
+        "game_start_sound": "level_up",
+        "start_unfocused": true,
+        "kills": false,
+        "kill_sound": "orb",
+        "toasts": true
+      }
+    },
+    "party": {
+      "enabled": true,
+      "settings": {
+        "auto_status": true,
+        "hud_chat_mode": true
+      }
+    },
+    "alt_marker": {
+      "enabled": true,
+      "settings": {
+        "tab": true,
+        "nametags": true,
+        "chat": true,
+        "announce": true
+      }
+    },
+    "stats": {
+      "enabled": true,
+      "settings": {
+        "summary": true,
+        "left_is_loss": true,
+        "keep_days": 90,
+        "hud_period": "session",
+        "hud_scope": "current"
+      }
+    },
+    "leaderboards": {
+      "enabled": true,
+      "settings": {
+        "page_size": 10
+      }
+    },
+    "public_stats": {
+      "enabled": true,
+      "settings": {
+        "upload": true,
+        "auto_read": true,
+        "announce": true,
+        "remind_days": 3,
+        "rows": 10
+      }
+    },
+    "zoom": {
+      "enabled": true,
+      "settings": {
+        "amount": 4,
+        "mode": "hold",
+        "scroll": true,
+        "in_time": 1000,
+        "out_time": 500,
+        "slow_mouse": true,
+        "hand": true
+      }
+    },
+    "freelook": {
+      "enabled": true,
+      "settings": {
+        "mode": "hold",
+        "view": "behind"
+      }
+    },
+    "fullbright": {
+      "enabled": true,
+      "settings": {
+        "strength": 100
+      }
+    },
+    "armour_hud": {
+      "enabled": true,
+      "settings": {
+        "layout": "vertical",
+        "numbers": "remaining",
+        "hands": false,
+        "where": "everywhere",
+        "background": false
+      }
+    },
+    "ping_display": {
+      "enabled": true,
+      "settings": {
+        "format": "ms",
+        "colours": true,
+        "bars": false
+      }
+    },
+    "chat_history": {
+      "enabled": true,
+      "settings": {
+        "lines": 16384
+      }
+    },
+    "discord": {
+      "enabled": true,
+      "settings": {
+        "application_id": "",
+        "map": true,
+        "map_image": true,
+        "players": true,
+        "time": true,
+        "image": ""
+      }
+    },
+    "auto_clip": {
+      "enabled": false,
+      "settings": {
+        "eggs": true,
+        "kills": "off",
+        "wins": true,
+        "deaths": false,
+        "after": 4,
+        "lead": 6,
+        "start_buffer": true,
+        "rename": true,
+        "sound": "orb",
+        "exact": false,
+        "port": "4455",
+        "password": "",
+        "egg_words": "destroyed, broken, broke, smashed, cracked"
+      }
+    },
+    "shortcuts": {
+      "enabled": true,
+      "settings": {
+        "aliases": true
+      }
+    },
+    "vote": {
+      "enabled": true,
+      "settings": {
+        "name": "",
+        "site_minecraft_mp": true,
+        "site_minecraftservers": true,
+        "site_server_list": true,
+        "site_findmcserver": true,
+        "site_minerank": true
+      }
+    }
+  },
+  "hud": {
+    "spawn_protection": {
+      "anchor": "CENTER",
+      "x": 0,
+      "y": 30,
+      "scale": 100,
+      "visible": true
+    },
+    "item_cooldowns": {
+      "anchor": "CENTER",
+      "x": 1,
+      "y": 35,
+      "scale": 100,
+      "visible": true
+    },
+    "armour": {
+      "anchor": "BOTTOM_RIGHT",
+      "x": 0,
+      "y": -7,
+      "scale": 100,
+      "visible": false
+    },
+    "build_limit": {
+      "anchor": "TOP_LEFT",
+      "x": 0,
+      "y": 121,
+      "scale": 100,
+      "visible": true
+    },
+    "bridge": {
+      "anchor": "MIDDLE_RIGHT",
+      "x": -4,
+      "y": 0,
+      "scale": 100,
+      "visible": true
+    },
+    "resources": {
+      "anchor": "MIDDLE_LEFT",
+      "x": 4,
+      "y": 48,
+      "scale": 100,
+      "visible": false
+    },
+    "coach_egg": {
+      "anchor": "TOP_LEFT",
+      "x": 1,
+      "y": 1,
+      "scale": 100,
+      "visible": true
+    },
+    "supply": {
+      "anchor": "BOTTOM_CENTER",
+      "x": 240,
+      "y": 0,
+      "scale": 100,
+      "visible": true
+    },
+    "shop_discount": {
+      "anchor": "TOP_LEFT",
+      "x": 2,
+      "y": 16,
+      "scale": 100,
+      "visible": true
+    },
+    "game_timer": {
+      "anchor": "TOP_LEFT",
+      "x": 0,
+      "y": 106,
+      "scale": 100,
+      "visible": true
+    },
+    "map_layout": {
+      "anchor": "TOP_LEFT",
+      "x": 0,
+      "y": 48,
+      "scale": 100,
+      "visible": false
+    },
+    "map_brief": {
+      "anchor": "MIDDLE_LEFT",
+      "x": 2,
+      "y": -20,
+      "scale": 100,
+      "visible": true
+    },
+    "hidden_chest": {
+      "anchor": "TOP_CENTER",
+      "x": 0,
+      "y": 24,
+      "scale": 100,
+      "visible": true
+    },
+    "party": {
+      "anchor": "TOP_RIGHT",
+      "x": -4,
+      "y": 90,
+      "scale": 100,
+      "visible": true
+    },
+    "alts_here": {
+      "anchor": "BOTTOM_LEFT",
+      "x": 0,
+      "y": 0,
+      "scale": 100,
+      "visible": true
+    },
+    "stats": {
+      "anchor": "TOP_RIGHT",
+      "x": -4,
+      "y": 30,
+      "scale": 100,
+      "visible": true
+    },
+    "armour_hud": {
+      "anchor": "CENTER",
+      "x": -52,
+      "y": -36,
+      "scale": 75,
+      "visible": true
+    }
+  }
+}

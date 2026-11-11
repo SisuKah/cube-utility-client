@@ -45,6 +45,22 @@ public final class Fonts {
         return named("ui_" + Math.max(1, Math.min(8, guiScale)));
     }
 
+    /** The pixel size in one of these fonts' names, like 12 for cubeutilityclient:label_12. */
+    public static float size(FontDescription font) {
+        if (font instanceof FontDescription.Resource resource) {
+            String path = resource.id().getPath();
+            int cut = path.lastIndexOf('_');
+            if (cut >= 0) {
+                try {
+                    return Integer.parseInt(path.substring(cut + 1));
+                } catch (NumberFormatException ignored) {
+                    // Not one of ours.
+                }
+            }
+        }
+        return 9f;
+    }
+
     private static FontDescription named(String name) {
         return CACHE.computeIfAbsent(name, key -> new FontDescription.Resource(CubeUtilityClient.id(key)));
     }

@@ -1,0 +1,37 @@
+{
+  "forcedParticles": "FOLLOW_SETTINGS",
+  "forcedParticleDistance": 32,
+  "forcedParticleKeepPercent": 50,
+  "particleCap": 4096,
+  "singleItemModel": true,
+  "displayEntityMaxDistance": 0,
+  "stackDuplicateMessages": true,
+  "stackLookback": 5,
+  "stackWindowSeconds": 60,
+  "filterServers": [
+    "cubecraft.net"
+  ],
+  "hideRankAds": true,
+  "hideWelcomeBanner": true,
+  "hideBlankLines": true,
+  "shopMessagesToActionBar": true,
+  "hideJoinLeave": true,
+  "hideVotes": false,
+  "customHidePatterns": [
+    "^(?:Want to (?:join our .+ Team|be part of Team CubeCraft|create a map)|Stay safe on CubeCraft!|Join our Discord!|Follow us on |Check out our Forums|Purchase ranks at |We've added new .+Visit our Store)",
+    "^You have (?:\\d+ unclaimed rewards?!|pending friend requests! Click HERE to view them\\.)$",
+    "^Cheating is against the server rules\\."
+  ],
+  "customActionBarPatterns": [
+    "^.+ has upgraded one of your \\w+ generators to level \\d+\\.$",
+    "^You (?:cannot build near villagers|can't place blocks here|can only break blocks placed|can't interact with this while holding)",
+    "^\\+\\d+ (?:Points?|Experience)$",
+    "^(?:Started parkour!|Returning to the beginning of parkour)",
+    "^Your .+ gadget is on cooldown for \\d+ seconds?\\.$",
+    "^You have been given your kit!"
+  ],
+  "hideAdBossBar": true,
+  "hiddenBossBarPatterns": [
+    "(?i)^Playing .+ on PLAY\\.CUBECRAFT\\.NET$"
+  ]
+}

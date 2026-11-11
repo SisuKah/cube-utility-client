@@ -1,0 +1,54 @@
+{
+  "healthDisplay": "BOTH",
+  "showHands": true,
+  "followCamera": true,
+  "clickRange": 128,
+  "enterMessage": true,
+  "hitMarker": true,
+  "damageNumbers": true,
+  "widgetBackground": true,
+  "chatKillDetection": true,
+  "widgets": {
+    "armor": {
+      "enabled": false,
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "health": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "keys": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "combo": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "opponent": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "stats": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "nearby": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    },
+    "feed": {
+      "x": 0,
+      "y": 0,
+      "scale": 1.0
+    }
+  }
+}

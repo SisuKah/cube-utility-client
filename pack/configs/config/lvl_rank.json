@@ -1,0 +1,65 @@
+{
+  "enableLevelNametags": true,
+  "enableRankBars": true,
+  "showLevelInTabList": true,
+  "showRankInNametag": false,
+  "decorateServerNametags": true,
+  "rankNametagStyle": "NAME",
+  "levelFormat": "%d",
+  "levelColor": "#F54927",
+  "maxNametagDistance": 48.0,
+  "levelVisibility": "EVERYONE",
+  "showLevelOnSelf": true,
+  "rankBarWidth": 3,
+  "unknownRankColor": "#5A5A5A",
+  "drawBarForUnknownRank": true,
+  "ranks": {
+    "Default": {
+      "glyph": "U+E1AB",
+      "color": "#9E9E9E"
+    },
+    "Iron": {
+      "glyph": "U+E1AC",
+      "color": "#FFFFFF"
+    },
+    "Diamond": {
+      "glyph": "U+E1AD",
+      "color": "#55FFFF"
+    },
+    "Obsidian": {
+      "glyph": "U+E1AE",
+      "color": "#A855F7"
+    },
+    "U+E1A2": {
+      "glyph": "U+E1A2",
+      "color": "#FFFFFF"
+    },
+    "U+E1A1": {
+      "glyph": "U+E1A1",
+      "color": "#FFFFFF"
+    }
+  },
+  "clearCacheOnDisconnect": true,
+  "clearCacheOnMainMenu": true,
+  "cacheEntryTtlMinutes": 240,
+  "persistPlayerDatabase": false,
+  "databaseRetentionDays": 30,
+  "autoWhoEnabled": true,
+  "autoWhoCommand": "who",
+  "autoWhoDelaySeconds": 1,
+  "autoWhoSettleSeconds": 1,
+  "autoWhoMinUnknownPlayers": 2,
+  "autoWhoCooldownSeconds": 10,
+  "autoWhoAnnounce": false,
+  "autoWhoHideReply": true,
+  "cubecraftDomains": [
+    "cubecraft.net",
+    "cubecraft.games",
+    "cubecraftgames.net"
+  ],
+  "debugLogging": false,
+  "debugToChat": false,
+  "debugIgnoreServerCheck": false,
+  "clearCacheOnNextLoad": false,
+  "configVersion": 2
+}

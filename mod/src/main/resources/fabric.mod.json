@@ -3,11 +3,12 @@
   "id": "cubeutilityclient",
   "version": "${version}",
   "name": "Cube Utility Client",
-  "description": "The Cube Utility Client look: a space title screen, restyled menus and a dark window.",
+  "description": "The Cube Utility Client look: a space title screen, restyled menus, a dark window, and one settings page for every mod (Right Shift).",
   "icon": "assets/cubeutilityclient/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.cubeutilityclient.CubeUtilityClient"]
+    "client": ["dev.cubeutilityclient.CubeUtilityClient"],
+    "modmenu": ["dev.cubeutilityclient.compat.ModMenuEntry"]
   },
   "mixins": [
     {

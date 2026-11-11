@@ -19,17 +19,6 @@ final class Widgets {
 
     /** The pixel size in a font's name, like 12 for cubeutilityclient:label_12. */
     static float size(FontDescription font) {
-        if (font instanceof FontDescription.Resource resource) {
-            String path = resource.id().getPath();
-            int cut = path.lastIndexOf('_');
-            if (cut >= 0) {
-                try {
-                    return Integer.parseInt(path.substring(cut + 1));
-                } catch (NumberFormatException ignored) {
-                    // Not one of ours.
-                }
-            }
-        }
-        return 9f;
+        return dev.cubeutilityclient.render.Fonts.size(font);
     }
 }

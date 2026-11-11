@@ -19,13 +19,16 @@ public final class QuadBatch implements GuiElementRenderState {
     private final TextureSetup textureSetup;
     private final Matrix3x2f pose;
     private final ScreenRectangle bounds;
+    /** The clip in place when the batch was made (a scrolling list's), or null. */
+    private final ScreenRectangle scissor;
     private final boolean textured;
     private float[] xy = new float[512];
     private float[] uv;
     private int[] colors = new int[256];
     private int vertices;
 
-    QuadBatch(RenderPipeline pipeline, TextureSetup textureSetup, Matrix3x2fc pose, ScreenRectangle bounds, boolean textured) {
+    QuadBatch(RenderPipeline pipeline, TextureSetup textureSetup, Matrix3x2fc pose, ScreenRectangle bounds, ScreenRectangle scissor, boolean textured) {
+        this.scissor = scissor;
         this.pipeline = pipeline;
         this.textureSetup = textureSetup;
         this.pose = new Matrix3x2f(pose);
@@ -96,7 +99,7 @@ public final class QuadBatch implements GuiElementRenderState {
 
     @Override
     public ScreenRectangle scissorArea() {
-        return null;
+        return this.scissor;
     }
 
     @Override

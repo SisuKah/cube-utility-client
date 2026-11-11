@@ -5,6 +5,14 @@ public final class Motion {
     private float value;
     private long last = System.nanoTime();
 
+    public Motion() {
+    }
+
+    /** Starts at {@code value} instead of 0, so something already on doesn't animate in. */
+    public Motion(float value) {
+        this.value = value;
+    }
+
     /** Moves towards {@code target}, taking about {@code seconds} to get there. */
     public float towards(float target, float seconds) {
         long now = System.nanoTime();

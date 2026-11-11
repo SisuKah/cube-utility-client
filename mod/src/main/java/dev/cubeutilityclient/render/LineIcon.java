@@ -42,6 +42,34 @@ public enum LineIcon {
             return Math.min(gear, solid(length(dx, dy) - 4.5f));
         }
     },
+    /** Close: a plain X. */
+    CLOSE {
+        @Override
+        float distance(float x, float y) {
+            return Math.min(segment(x, y, 20, 20, 44, 44), segment(x, y, 44, 20, 20, 44));
+        }
+    },
+    /** A chevron pointing left, for the previous choice. */
+    LEFT {
+        @Override
+        float distance(float x, float y) {
+            return Math.min(segment(x, y, 38, 18, 24, 32), segment(x, y, 24, 32, 38, 46));
+        }
+    },
+    /** A chevron pointing right, for the next choice. */
+    RIGHT {
+        @Override
+        float distance(float x, float y) {
+            return Math.min(segment(x, y, 26, 18, 40, 32), segment(x, y, 40, 32, 26, 46));
+        }
+    },
+    /** Search: a lens and its handle. */
+    SEARCH {
+        @Override
+        float distance(float x, float y) {
+            return Math.min(Math.abs(circle(x, y, 28, 28, 14)), segment(x, y, 38.5f, 38.5f, 50, 50));
+        }
+    },
     /** Quit: the power symbol, a ring open at the top with a bar through the gap. */
     QUIT {
         @Override

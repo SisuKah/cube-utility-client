@@ -7,6 +7,8 @@
     "AbstractButtonMixin",
     "AbstractSliderButtonMixin",
     "FontMixin",
+    "GuiGraphicsExtractorAccessor",
+    "GuiGraphicsExtractorMixin",
     "GuiMixin",
     "MinecraftMixin",
     "ScreenMixin",

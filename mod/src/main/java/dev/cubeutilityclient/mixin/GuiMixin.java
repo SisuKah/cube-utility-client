@@ -1,12 +1,15 @@
 package dev.cubeutilityclient.mixin;
 
 import dev.cubeutilityclient.screen.CubeTitleScreen;
+import dev.cubeutilityclient.settings.SettingsScreen;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Wherever the game opens its title screen (at start, after leaving a world or a server), the
@@ -16,6 +19,18 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
  */
 @Mixin(Gui.class)
 public abstract class GuiMixin {
+    /**
+     * A mod's settings screen opening inside the settings page that switches to another screen
+     * (Reese's Sodium Options swaps its own in for Sodium's) is shown inside the page too, instead
+     * of taking over the window.
+     */
+    @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
+    private void cubeutilityclient$keepInsidePage(Screen screen, CallbackInfo ci) {
+        if (screen != null && SettingsScreen.adopt(screen)) {
+            ci.cancel();
+        }
+    }
+
     @ModifyVariable(method = "setScreen", at = @At("HEAD"), argsOnly = true)
     private Screen cubeutilityclient$givenTitleScreen(Screen screen) {
         return swap(screen);

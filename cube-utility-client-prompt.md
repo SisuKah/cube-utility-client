@@ -86,7 +86,7 @@ Sign-in tokens are stored in the Windows Credential Manager through `keyring`, n
 - Download engine (`net` module): 16 files at a time for the game, 8 for pack files, retries with backoff, sha1 (Mojang) or sha512 (pack) checked while streaming, written to a temp file and renamed into place. Never bundle or rehost Minecraft or Java files.
 - Launch: build the classpath and fill the JVM and game arguments from the version JSON (replace the `${...}` placeholders and honor `rules` and `features`). Use the managed Java and the memory from settings. Default RAM is 4 GB (3 GB on PCs with less than 8 GB). The slider goes from 2 GB up to 16 GB or half the system RAM, whichever is lower. Start Java with `tokio::process::Command` without a console window.
 - The "Launch into" choice on Home: **CubeCraft** adds the Quick Play argument `--quickPlayMultiplayer play.cubecraft.net`; **Title screen** adds nothing. Check that Quick Play works on 26.3.
-- Players never see Minecraft's welcome screen: before every launch, set `onboardAccessibility:false` in the instance's `options.txt`. While the instance is unused (no `options.txt`, or one still on the welcome screen), first copy the newest `options.txt` from the player's other installs (the Minecraft Launcher and its profiles' game folders, Modrinth App, Prism Launcher, CurseForge, Lunar Client), without the resource pack choices.
+- Players never see Minecraft's welcome screen: before every launch, set `onboardAccessibility:false` in the instance's `options.txt`. While the instance is unused (no `options.txt`, or one still on the welcome screen), first copy the newest `options.txt` from the player's other installs (the Minecraft Launcher and its profiles' game folders, Modrinth App, Prism Launcher, CurseForge, Lunar Client), without the resource pack choices, and fill in anything it lacks from the pack's defaults (`config/cubeutilityclient/default-options.txt`, my own settings, delivered as a pack config). With no other install, use the pack's defaults.
 - Write the game's output to `logs/`. If the game crashes (non-zero exit code, or a new file in `crash-reports/`), show a simple "Minecraft crashed" message with **Copy log** and **Repair files**.
 - "Hide launcher while playing" is on by default: hide the window on launch, show it again when the game exits.
 - Send progress to the UI as Tauri events (for example `install://progress` with the current file, bytes done and bytes total).
@@ -194,16 +194,22 @@ quickPlay: play.cubecraft.net
 allowExtraMods: true
 
 mods:
-  # My mods that aren't on Modrinth (jars in pack/jars)
-  - { id: cubeutility, name: Cube Utility,      file: jars/cube-utility-1.7.0+mc26.1-26.3.jar, group: own }
-  - { id: ewoptimizer, name: Eggwars Optimizer, file: jars/eggwars-optimizer-1.1.0.jar,         group: own }
-  - { id: armorhud,    name: Armor Dura HUD,    file: jars/armor-dura-hud-1.0.0.jar,            group: own }
+  # My mods that aren't on Modrinth (jars in pack/jars). Cube Utility 1.8.0 has zoom, freelook,
+  # fullbright, an armour HUD, ping numbers and more chat history built in.
+  - { id: cubeutility,       name: Cube Utility,        file: jars/cube-utility-1.8.0+mc26.1-26.3.jar,   group: own }
+  - { id: ewoptimizer,       name: Eggwars Optimizer,   file: jars/eggwars-optimizer-1.1.0.jar,          group: own }
+  - { id: cubeutilityclient, name: Cube Utility Client, file: jars/cube-utility-client-1.0.0+mc26.3.jar, group: own }
+  - { id: spectatorinside,   name: Spectator Inside,    file: jars/spectator-inside-1.3.0.jar,           group: own }
+  - { id: kbdelay,           name: KB Delay Meter,      file: jars/kb-delay-meter-0.1.0.jar,             group: own }
+  - { id: packetlogger,      name: Packet Logger,       file: jars/packet-logger-2.0.0mc26.3.jar,        group: own }
+  - { id: assistantbridge,   name: Assistant Bridge,    file: jars/assistant-bridge-0.3.1+mc26.3.jar,    group: own }   # 127.0.0.1 only, own token per PC
+  - { id: textlayoutcache,   name: Text Layout Cache,   file: jars/text-layout-cache-1.0.0+mc26.3.jar,   group: performance }
 
   # My mods on Modrinth: always follow my newest 26.3 release
-  - { modrinth: cubecraft-autovote,   version: latest, group: own }   # 1.2.0 today
-  - { modrinth: cubecraft-level-rank, version: latest, group: own }   # V5 today
+  - { modrinth: cubecraft-autovote,   version: latest, group: own }
+  - { modrinth: cubecraft-level-rank, version: latest, group: own }
 
-  # Performance (same set as my Eggwars Optimized pack), pinned
+  # Performance, pinned: the same set as my own 26.3 game
   - { modrinth: sodium,                version: mc26.3-0.9.2-fabric,  group: performance }
   - { modrinth: lithium,               version: mc26.3-0.26.3-fabric, group: performance }
   - { modrinth: immediatelyfast,       version: 1.17.1+26.3-fabric,   group: performance }
@@ -213,20 +219,25 @@ mods:
   - { modrinth: krypton,               version: 0.3.2,                group: performance }
   - { modrinth: sodium-extra,          version: mc26.3-0.9.5+fabric,  group: performance }
   - { modrinth: reeses-sodium-options, version: mc26.3-2.2.5+fabric,  group: performance }
+  - { modrinth: badoptimizations,      version: 2.4.1,                group: performance }
+  - { modrinth: moreculling,           version: 1.9.1,                group: performance }
+  - { modrinth: fast-ip-ping,          version: v1.0.12-mc26.3,       group: performance }
 
   # Libraries and UI
-  - { modrinth: fabric-api,      version: 0.166.0+26.3,    group: library }
-  - { modrinth: modmenu,         version: 21.0.0,          group: library }
-  - { modrinth: placeholder-api, version: 3.2.0+26.3,      group: library }   # Mod Menu needs it
-  - { modrinth: cloth-config,    version: 26.3.159+fabric, group: library }
+  - { modrinth: fabric-api,      version: 0.166.0+26.3,      group: library }
+  - { modrinth: modmenu,         version: 21.0.0,            group: library }
+  - { modrinth: placeholder-api, version: 3.2.0+26.3,        group: library }   # Mod Menu needs it
+  - { modrinth: cloth-config,    version: 26.3.159+fabric,   group: library }
+  - { modrinth: yacl,            version: 3.9.7+26.3-fabric, group: library }
+  - { modrinth: noxesium,        version: 3.3.0,             group: library }
+  - { modrinth: server-resource-pack-checker, version: fabric-1.2.2+26.3, group: library }
 
   # Optional quality of life (players can switch these on or off)
-  - { modrinth: zoomify,               version: 2.17.0+mc26.3, group: qol, optional: true, default: on }   # pulls in yacl + fabric-language-kotlin
-  - { modrinth: morechathistory,       version: 2.0.0,         group: qol, optional: true, default: on }
-  - { modrinth: cubes-without-borders, version: 5.0.0+26.3,    group: qol, optional: true, default: on }
-  - { modrinth: freelook,              version: 1.4.4,         group: qol, optional: true, default: off }  # check CubeCraft's rules before defaulting this on
-  - { modrinth: variants-cit,          version: 5.8.1+26.3,    group: qol, optional: true, default: off }
+  - { modrinth: cubes-without-borders, version: 5.0.0+26.3, group: qol, optional: true, default: on }
+  - { modrinth: variants-cit,          version: 5.8.1+26.3, group: qol, optional: true, default: on }
 ```
+
+The pack matches my own 26.3 game (the Minecraft Launcher profile that loads `.minecraft\mods-26.3`). Default settings for the mods come from my `.minecraft\config` (in `pack/configs`, "if-missing"), with nothing personal: no stats or caches, no OBS password, no Assistant Bridge token, no Packet Logger choices.
 
 My jars are in `pack/jars/`. Newer builds go in with `npm run pack:add` (ask me if one seems missing).
 
@@ -234,11 +245,11 @@ All of my mods are client-side Fabric mods that need Fabric API and Java 25, and
 
 Left out on purpose:
 - **Smart Mod Updater:** this launcher's sync replaces it, and it only exists for 1.21.11.
+- **Zoomify, Freelook, More Chat History and Armor Dura HUD:** Cube Utility 1.8.0 has all of them built in.
+- **Erosion:** All Rights Reserved and not on Modrinth, so the launcher can't download it (it never rehosts third-party jars).
+- **Dragon Egg Tracker:** my own, kept out of the pack on purpose.
 - **Weakness Glow and Replay Clip:** 1.21.11 dev snapshots. Add them once they're ported to 26.3.
-- **JustArmorHud:** All Rights Reserved license, and Armor Dura HUD covers it.
-- **Better Ping Display:** no 26.3 build yet.
-- **Noxesium:** made for MCC Island, not CubeCraft.
-- **Packet Logger and Packet Tool:** developer tools.
+- **JustArmorHud:** All Rights Reserved license, and Cube Utility's armour HUD covers it.
 
 The launcher always downloads third-party mods from Modrinth's CDN at the pinned version and never rehosts them. That respects their licenses (for example Sodium's PolyForm Shield and Entity Culling's custom license) and keeps the authors' download counts.
 
@@ -296,6 +307,7 @@ Empty parts of the top bar drag the window (`data-tauri-drag-region`), and doubl
 - **Title screen:** deep space with a slowly turning spiral galaxy on the right, stars drifting at three depths (they lean a little toward the mouse) and now and then a shooting star. On the left, "CUBE UTILITY" over a gold "CLIENT" in large Manrope ExtraLight, and under it one row: a gold **Play CubeCraft** pill that joins play.cubecraft.net, then glass **Singleplayer** and **Multiplayer** pills. Small round icon buttons at the top right: Mods (only when Mod Menu is in the pack), Settings, Quit. The credits link sits at the bottom right. Nothing else: no panorama, logo, splash text, Realms or version text. Everything rises and fades in when the screen opens, and hovered buttons turn gold.
 - **Other menus:** Minecraft's buttons and sliders become glass pills with a hairline border that turns gold on hover; sliders fill gold, and labels use Manrope. Outside a world, all menu text uses Manrope and the galaxy shows behind the menus under a dark teal wash with gold header lines. In a world, other text keeps Minecraft's font, because servers draw parts of their menus with extra glyphs in it.
 - **Window:** titled "Cube Utility Client", with the app icon and a dark title bar instead of the white one.
+- **One settings page for every mod:** Right Shift opens it anywhere (in a world, on the title screen and in menus, unless a text box has the keyboard; pressing it again closes it), and so does Mods on the title screen. A large glass panel: on the left "CUBE UTILITY CLIENT", "Settings", a search field and a tab for each mod that has settings, named for what it changes ("Video", "Fullscreen", "Hidden mobs"; my own mods keep their names), with the mod's icon and a line saying what it does, in groups (CubeCraft, Video and performance, Window and extras, Tools, Other mods). Mods with nothing to change (libraries and most performance mods) get no tab. On the right: the tab's name, what it does, the mod's name and version in small print, and below them its settings. Settings built with Sodium's options (Sodium, Sodium Extra, and the pages other mods add to it, like MoreCulling's), YACL, Cloth Config or Minecraft's own option type (Noxesium's), EntityCulling's switches, and BadOptimizations' text file, are drawn by the page itself so every mod looks the same: a row per setting with its name and up to three lines on what it does (all of it on hover), and on the right a gold switch, a slider with its value, a ‹ choice › or a text field; headings for groups, chips across the top for a mod's categories (Left and Right switch them), a "Restart" tag where a change needs one, and one note when all of a mod's settings do. Changes save straight away through the mod's own saving, like Minecraft's options. A setting the page can't draw (a list, like EntityCulling's mobs to leave alone) gets a link to the mod's own screen. Reset buttons, like Noxesium's for its positions and sizes, show as a Reset button in the row. Any other mod's settings screen shows inside the panel in the client's style; one that can't gets an "Open settings" button. Mod Menu lists only Cube Utility Client, whose settings button opens the same page; the other mods stay installed and working.
 - The title screen is laid out at 1280 × 720 and scales with the window. In small windows, text stops shrinking at 10 px and icons at 16 px, and icons are drawn as shapes at their exact pixel size.
 
 ## 6. Style (from the reference image)

@@ -709,6 +709,7 @@ async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
     .await;
     match prepared {
         Ok(Ok(game::options::Prepared::Imported(from))) => tracing::info!("brought the player's Minecraft settings over from {from}"),
+        Ok(Ok(game::options::Prepared::PackDefaults)) => tracing::info!("started options.txt from the pack's default settings"),
         Ok(Ok(game::options::Prepared::SkippedWelcome)) => tracing::info!("marked Minecraft's welcome screen as done"),
         Ok(Ok(game::options::Prepared::Unchanged)) => {}
         Ok(Err(error)) => tracing::warn!("couldn't prepare options.txt ({error}); Minecraft may show its welcome screen"),

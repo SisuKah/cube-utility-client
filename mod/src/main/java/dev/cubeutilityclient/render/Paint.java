@@ -55,7 +55,8 @@ public final class Paint {
     }
 
     private QuadBatch submit(RenderPipeline pipeline, TextureSetup setup, boolean textured) {
-        QuadBatch batch = new QuadBatch(pipeline, setup, this.pixelPose, this.bounds, textured);
+        // Clipped like the game's own drawing: by whatever scissor is in place right now.
+        QuadBatch batch = new QuadBatch(pipeline, setup, this.pixelPose, this.bounds, this.graphics.scissorStack.peek(), textured);
         this.graphics.guiRenderState.addGuiElement(batch);
         return batch;
     }
@@ -177,6 +178,51 @@ public final class Paint {
                 if (kind == 2) {
                     edgeRun = px;
                     edgeColor = color;
+                }
+            }
+        }
+    }
+
+    /**
+     * A rounded rectangle with a {@code border} pixels wide hairline just inside its edge. Only
+     * the four corners are worked out pixel by pixel, so large panels stay cheap.
+     */
+    public static void roundedRect(QuadBatch batch, float x, float y, float w, float h, float radius, float border, int fill, int borderColor) {
+        x = Math.round(x);
+        y = Math.round(y);
+        w = Math.round(w);
+        h = Math.round(h);
+        float r = Math.round(Math.max(0f, Math.min(radius, Math.min(w, h) / 2f)));
+        // Straight parts: a centre column and the two sides between the corners.
+        batch.rect(x + r, y, x + w - r, y + h, fill);
+        batch.rect(x, y + r, x + r, y + h - r, fill);
+        batch.rect(x + w - r, y + r, x + w, y + h - r, fill);
+        if (border > 0f && borderColor >>> 24 != 0) {
+            batch.rect(x + r, y, x + w - r, y + border, borderColor);
+            batch.rect(x + r, y + h - border, x + w - r, y + h, borderColor);
+            batch.rect(x, y + r, x + border, y + h - r, borderColor);
+            batch.rect(x + w - border, y + r, x + w, y + h - r, borderColor);
+        }
+        if (r <= 0f) {
+            return;
+        }
+        // The corners: each pixel's share of fill and border from its distance to the arc.
+        float[][] centres = {{x + r, y + r}, {x + w - r, y + r}, {x + r, y + h - r}, {x + w - r, y + h - r}};
+        float[][] origins = {{x, y}, {x + w - r, y}, {x, y + h - r}, {x + w - r, y + h - r}};
+        for (int c = 0; c < 4; c++) {
+            for (int py = (int) origins[c][1]; py < origins[c][1] + r; py++) {
+                for (int px = (int) origins[c][0]; px < origins[c][0] + r; px++) {
+                    float dx = px + 0.5f - centres[c][0], dy = py + 0.5f - centres[c][1];
+                    float d = (float) Math.sqrt(dx * dx + dy * dy) - r;
+                    float outer = clamp01(0.5f - d);
+                    if (outer <= 0f) {
+                        continue;
+                    }
+                    float inner = border > 0f ? clamp01(0.5f - d - border) : outer;
+                    int color = coverage(fill, inner, borderColor, outer - inner);
+                    if (color >>> 24 != 0) {
+                        batch.rect(px, py, px + 1, py + 1, color);
+                    }
                 }
             }
         }

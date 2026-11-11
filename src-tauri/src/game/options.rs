@@ -1,7 +1,9 @@
 //! Minecraft's options.txt. Before every launch the launcher marks the game's welcome screen
 //! (the narrator, accessibility and language questions) as done, so Minecraft opens on its
 //! title screen. On a player's first launch it also brings over the settings of the Minecraft
-//! they already play: keybinds, video, sound and language.
+//! they already play: keybinds, video, sound and language. The pack's own defaults (the pack
+//! owner's settings, in config/cubeutilityclient/default-options.txt) fill in the rest, like
+//! the keys for the pack's mods, or everything for a player with no other Minecraft.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -14,6 +16,9 @@ const WELCOME_KEY: &str = "onboardAccessibility";
 
 /// Resource pack choices name pack files in the other install's own folder, which aren't here.
 const NOT_COPIED: &[&str] = &["resourcePacks", "incompatibleResourcePacks"];
+
+/// The pack's default settings, inside the game folder (a pack config file).
+const PACK_DEFAULTS: &str = "config/cubeutilityclient/default-options.txt";
 
 /// options.txt as ordered `key:value` lines. Values can hold colons too (`lastServer`), so a
 /// line splits at its first one, the way Minecraft reads it.
@@ -144,13 +149,24 @@ pub enum Prepared {
     Unchanged,
     /// The welcome screen is marked as done; everything else is Minecraft's default.
     SkippedWelcome,
-    /// The player's settings came over from another install (its label).
+    /// No other install, so the pack's default settings were used.
+    PackDefaults,
+    /// The player's settings came over from another install (its label), with the pack's
+    /// defaults for anything their file doesn't have.
     Imported(String),
+}
+
+/// A real options.txt always says which Minecraft wrote it.
+fn read_options(path: &Path) -> Option<Options> {
+    let parsed = Options::parse(&std::fs::read_to_string(path).ok()?);
+    parsed.get("version")?;
+    Some(parsed)
 }
 
 /// Makes Minecraft open on its title screen. While the game folder is unused (no options.txt
 /// yet, or one still waiting on the welcome screen), it first takes the newest of the player's
-/// other settings files, and keeps the file it replaces in the launcher's state folder.
+/// other settings files and fills in what that lacks from the pack's defaults (or takes the
+/// pack's defaults alone), and keeps the file it replaces in the launcher's state folder.
 pub fn prepare(paths: &Paths, others: &[Found]) -> std::io::Result<Prepared> {
     let file = paths.instance().join("options.txt");
     let existing = std::fs::read_to_string(&file).ok();
@@ -159,26 +175,33 @@ pub fn prepare(paths: &Paths, others: &[Found]) -> std::io::Result<Prepared> {
         return Ok(Prepared::Unchanged);
     }
 
-    let theirs = others.iter().find_map(|other| {
-        let parsed = Options::parse(&std::fs::read_to_string(&other.path).ok()?);
-        // A real options.txt always says which Minecraft wrote it. Minecraft brings an older
-        // one up to date by itself.
-        parsed.get("version")?;
-        Some((parsed, other.label.clone()))
-    });
-    let result = match theirs {
-        Some((parsed, label)) => {
-            if let Some(text) = &existing {
-                write_atomic(&paths.state().join("options-before-import.txt"), text.as_bytes())?;
+    let defaults = read_options(&paths.instance().join(PACK_DEFAULTS));
+    // Minecraft brings an older file up to date by itself, so the player's own version stays.
+    let theirs = others.iter().find_map(|other| Some((read_options(&other.path)?, other.label.clone())));
+    let result = match (theirs, defaults) {
+        (Some((mut parsed, label)), defaults) => {
+            for (key, value) in defaults.iter().flat_map(|d| d.lines.iter()) {
+                if parsed.get(key).is_none() {
+                    parsed.set(key, value);
+                }
             }
             options = parsed;
-            for key in NOT_COPIED {
-                options.remove(key);
-            }
             Prepared::Imported(label)
         }
-        None => Prepared::SkippedWelcome,
+        (None, Some(defaults)) => {
+            options = defaults;
+            Prepared::PackDefaults
+        }
+        (None, None) => Prepared::SkippedWelcome,
     };
+    if result != Prepared::SkippedWelcome {
+        if let Some(text) = &existing {
+            write_atomic(&paths.state().join("options-before-import.txt"), text.as_bytes())?;
+        }
+        for key in NOT_COPIED {
+            options.remove(key);
+        }
+    }
     options.set(WELCOME_KEY, "false");
     write_atomic(&file, options.to_text().as_bytes())?;
     Ok(result)
@@ -281,6 +304,36 @@ mod tests {
         write(&paths.instance().join("options.txt"), "version:5023\nfov:0.5\nonboardAccessibility:true\n");
         assert_eq!(prepare(&paths, &[]).unwrap(), Prepared::SkippedWelcome);
         assert_eq!(std::fs::read_to_string(paths.instance().join("options.txt")).unwrap(), "version:5023\nfov:0.5\nonboardAccessibility:false\n");
+    }
+
+    const DEFAULTS: &str = "version:5023\nlang:en_us\nguiScale:3\nkey_key.cubeutility.zoom:key.keyboard.grave.accent\nonboardAccessibility:false\n";
+
+    #[test]
+    fn the_packs_defaults_fill_in_what_the_players_file_lacks() {
+        let dir = TempDir::new("defaults-merge");
+        let paths = Paths::new(dir.0.join("data"));
+        write(&paths.instance().join(PACK_DEFAULTS), DEFAULTS);
+        let theirs = dir.0.join("minecraft").join("options.txt");
+        write(&theirs, THEIRS);
+
+        assert_eq!(prepare(&paths, &[found(theirs, "Minecraft Launcher")]).unwrap(), Prepared::Imported("Minecraft Launcher".to_string()));
+        let ours = Options::parse(&std::fs::read_to_string(paths.instance().join("options.txt")).unwrap());
+        assert_eq!(ours.get("lang"), Some("de_de"), "the player's own settings win");
+        assert_eq!(ours.get("guiScale"), Some("3"), "the pack fills in what they never set");
+        assert_eq!(ours.get("key_key.cubeutility.zoom"), Some("key.keyboard.grave.accent"));
+        assert_eq!(ours.get("resourcePacks"), None);
+    }
+
+    #[test]
+    fn without_other_installs_the_packs_defaults_are_used() {
+        let dir = TempDir::new("defaults-only");
+        let paths = Paths::new(dir.0.join("data"));
+        write(&paths.instance().join(PACK_DEFAULTS), DEFAULTS);
+        assert_eq!(prepare(&paths, &[]).unwrap(), Prepared::PackDefaults);
+        assert_eq!(std::fs::read_to_string(paths.instance().join("options.txt")).unwrap(), DEFAULTS);
+        // Played since: left alone, even when the pack's defaults change.
+        write(&paths.instance().join(PACK_DEFAULTS), "version:5023\nguiScale:2\n");
+        assert_eq!(prepare(&paths, &[]).unwrap(), Prepared::Unchanged);
     }
 
     #[test]
