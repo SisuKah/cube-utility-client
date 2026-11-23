@@ -1,0 +1,750 @@
+{
+  "schema": 1,
+  "serial": 3,
+  "packVersion": "2026.11.23-1",
+  "channel": "stable",
+  "releasedAt": "2026-11-23T12:22:18Z",
+  "minLauncherVersion": "1.0.0",
+  "minecraft": "26.3",
+  "loader": {
+    "type": "fabric",
+    "version": "0.20.1"
+  },
+  "java": {
+    "component": "java-runtime-epsilon",
+    "major": 25
+  },
+  "quickPlay": "play.cubecraft.net",
+  "allowExtraMods": true,
+  "notes": {
+    "title": "Cube Utility 1.8.0, one settings page, Get more and 16 more mods",
+    "markdown": "- New: **Get more**, at the top of the settings page. Keystrokes, TNT timer, Sprint status, Effect timers, Faster inventory, Food info and a tidier F3 screen are already installed: press Get and one is on straight away, with no download and no restart, and gets its own tab with its settings. Remove puts it away again.\n- Press Right Shift (or Mods on the title screen) for one settings page with every mod: pick a mod on the left, change its settings on the right. Video, Fullscreen, Eggwars, Background frame rate, Hidden mobs, Hidden blocks, Extra speed-ups and Server features all look alike, with switches, sliders and choices that save as soon as you change them.\n- Cube Utility 1.8.0 has zoom, freelook, fullbright, an armour HUD, ping numbers and more chat history built in, so Zoomify, Freelook, More Chat History and Armor Dura HUD left the pack.\n- Freelook: hold the middle mouse button to look around. The launcher puts it there for you, unless something else of yours is on that button; then pick a key for \"Freelook (look around)\" in Controls.\n- New: Spectator Inside, KB Delay Meter, Packet Logger, Assistant Bridge, Text Layout Cache, BadOptimizations, MoreCulling, Fast IP Ping, Noxesium and Server Resource Pack Checker. Variants CIT is now on unless you switch it off.\n- New players start with tuned settings for every mod."
+  },
+  "files": [
+    {
+      "id": "cubeutility",
+      "name": "Cube Utility",
+      "version": "1.8.0+mc26.1-26.3",
+      "description": "An all-in-one, client-side toolkit for CubeCraft: game timer, map and team layout, build limit, bridge lengths, spawn protection, item cooldowns, durability and drop protection, EggWars coach, clutch cues, supply HUD, shop discount, map briefing, AFK alarm, alt marker, hidden chest finder, party tools, auto GG, auto play and auto kit (your kit per map), chat alerts, stats, leaderboards, Discord presence, automatic clips through OBS and voting; plus zoom, freelook, fullbright, an armour HUD, ping numbers and more chat history for any server. Every feature can be switched on and off on its own.",
+      "group": "own",
+      "path": "mods/cube-utility-1.8.0+mc26.1-26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/cube-utility-1.8.0-mc26.1-26.3.jar",
+      "sha512": "852b2b406b9589a6e7fbc002ca16c58bdeaf6d1ec2fb9145cdb82c494bbb0d494eebcee4740a747c5d6ad011da2c49e32f17b0a92271f9f0b9409d151ee31f45",
+      "size": 906970,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "ewoptimizer",
+      "name": "Eggwars Optimizer",
+      "version": "1.1.0",
+      "description": "Client-side tweaks for CubeCraft Eggwars: forced generator particles follow your Particles setting, dropped item stacks draw one model, duplicate chat lines stack, and shop/rank spam is cleaned up.",
+      "group": "own",
+      "path": "mods/eggwars-optimizer-1.1.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/eggwars-optimizer-1.1.0.jar",
+      "sha512": "007dcbc909557adeaa750cbbb447151e4dfc9fb27184c94f956f9c57622cf6e97388ba2b0e98e75bdb5c416b7a548ba07589d4e7223ca2f1704e01ef91c0f951",
+      "size": 50015,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "cubeutilityclient",
+      "name": "Cube Utility Client",
+      "version": "1.1.0+mc26.3",
+      "description": "The Cube Utility Client look: a space title screen, restyled menus, a dark window, and one settings page for every mod (Right Shift).",
+      "group": "own",
+      "path": "mods/cube-utility-client-1.1.0+mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/cube-utility-client-1.1.0-mc26.3.jar",
+      "sha512": "bef928b49cf55225156a64b7beaa396a047fd49b49e21cedb1423e33335a25debac69ae3e1b3b954376124f05e43bf622dac7d7044573608cb7709fd650bc9d0",
+      "size": 490348,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "spectatorinside",
+      "name": "Spectator Inside",
+      "version": "1.3.0",
+      "description": "In spectator mode, left-click any player or mob (even from far away) to go inside their head, or hop between players with the arrow keys. See their hands, health, keystrokes, combos, reach, opponent and kills on a HUD you can rearrange (press J). Works client-side; your body is teleported after them with the spectator menu's teleport, so they never drop out of view and you hear what they hear. Press Sneak to leave.",
+      "group": "own",
+      "path": "mods/spectator-inside-1.3.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/spectator-inside-1.3.0.jar",
+      "sha512": "b72d6a9f86a19952e7ed7de5781185ce35f1d547442efd4ddaa6f7fc0e09578fb314294e2132624899ecc4088f7bd8b91b06119f61f4004ea8f198f784be4784",
+      "size": 93840,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "kbdelay",
+      "name": "KB Delay Meter",
+      "version": "0.1.0",
+      "description": "Shows how long each opponent's knockback takes to show up after a hit: a live read on their real round trip. Read-only: it only looks at packets your client already receives and changes nothing you send.",
+      "group": "own",
+      "path": "mods/kb-delay-meter-0.1.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/kb-delay-meter-0.1.0.jar",
+      "sha512": "a58eb71e4e16c0c81468fba3c9926a362c4dd0ea4fd9e9b89bb6add51cc45e614a353e24875dac14a8feafda56734ffa9745a75c0498ff1b06b8bf2886f1d02d",
+      "size": 21838,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "packetlogger",
+      "name": "Packet Logger",
+      "version": "2.0.0+mc26.3",
+      "description": "Logs the network packets you choose to chat or to size-limited log files. Press F6 for the packet picker, or use /packetlogger.",
+      "group": "own",
+      "path": "mods/packet-logger-2.0.0mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/packet-logger-2.0.0mc26.3.jar",
+      "sha512": "3d1d1b71508fd6098227adf610d925c37b273202750022f76b14e45811d9dc3821d5c5babe87b81677057bddbccd9e18a6d7940941f5d81c9af842784f0dc90c",
+      "size": 99677,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "assistantbridge",
+      "name": "Assistant Bridge",
+      "version": "0.3.1+mc26.3",
+      "description": "A local-only link between this game and your AI assistant on the same PC: live performance stats, video-setting control and timed A/B experiments. Listens on 127.0.0.1 only, needs a secret token, never sends anything to the server and never touches your controls.",
+      "group": "own",
+      "path": "mods/assistant-bridge-0.3.1+mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/assistant-bridge-0.3.1-mc26.3.jar",
+      "sha512": "f48d40b24349344f0220ee07edc920629ad7bf4be4d7dccbe65069cccbd99dbb36e1379055d5a7fd50209333e99024e4728ca33becf57d929db5f7ec2933cb6e",
+      "size": 96472,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "textlayoutcache",
+      "name": "Text Layout Cache",
+      "version": "1.0.0+mc26.3",
+      "description": "Performance only: remembers the bidi layout (ClientLanguage.getVisualOrder) of text the game drew before, so HUD strings, the scoreboard and the tab list don't run the ICU bidi analysis again every frame. Changes nothing on screen. /textcache shows the hit rate.",
+      "group": "performance",
+      "path": "mods/text-layout-cache-1.0.0+mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/text-layout-cache-1.0.0-mc26.3.jar",
+      "sha512": "3b154d2282712e88172215c8c5dd21c11f600ed527a1877d507c172ca4f8acbb2685e94f8ab01e0dedf6577e6cd51b2459fff6532116837fc3c2ad5dba0829d6",
+      "size": 8839,
+      "required": true,
+      "defaultEnabled": true
+    },
+    {
+      "id": "cubecraft-autovote",
+      "name": "CubeCraft AutoVote",
+      "version": "1.2.0",
+      "description": "AutoVote for different gamemodes.",
+      "group": "own",
+      "path": "mods/cube-auto-vote-1.2.0mc26.1-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/DxNReKnC/versions/pq68LwCh/cube-auto-vote-1.2.0mc26.1-26.3.jar",
+      "sha512": "359c040d6db8ee8444dcaa959bacd17473235592704544b97ddee91200e94910fb74260f242bf5ae3e13b2d6204c801d3f1d819b8996ece917d19bb1724d16c5",
+      "size": 119684,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "DxNReKnC",
+        "versionId": "pq68LwCh"
+      }
+    },
+    {
+      "id": "cubecraft-level-rank",
+      "name": "CubeCraft Level + Rank",
+      "version": "V5",
+      "description": "Shows CubeCraft player levels and rank colors in nametags and the tab list.",
+      "group": "own",
+      "path": "mods/lvl_rank-1.0+mc26.1-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/YTuGxVdW/versions/Bz4IF77x/lvl_rank-1.0%2Bmc26.1-26.3.jar",
+      "sha512": "fe23e44059a3d0d8ed157f2465bb6a543b7ac1575843c37aa4378558cea150a049982821c86edfea9ac98e9095467f8b6ad51ea0a97688bcfe539a274e267cd8",
+      "size": 190464,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "YTuGxVdW",
+        "versionId": "Bz4IF77x"
+      }
+    },
+    {
+      "id": "sodium",
+      "name": "Sodium",
+      "version": "mc26.3-0.9.2-fabric",
+      "description": "A high-performance rendering engine replacement for Minecraft, which greatly improves frame rates and reduces micro-stutter.",
+      "group": "performance",
+      "path": "mods/sodium-fabric-0.9.2+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/bAZQdGpg/sodium-fabric-0.9.2%2Bmc26.3.jar",
+      "sha512": "f3f260f204b8ce5e8777c2c73f537956755ec61f3817b0b78b5e5568e8aa40f14891f146475075109747665c7c88a45ca0ca9a8df3c68d79c58ecdaa8d8c4b93",
+      "size": 1908068,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "AANobbMI",
+        "versionId": "bAZQdGpg"
+      }
+    },
+    {
+      "id": "lithium",
+      "name": "Lithium",
+      "version": "mc26.3-0.26.3-fabric",
+      "description": "No-compromises game logic optimization mod, useful for both single-player games and multi-player servers.",
+      "group": "performance",
+      "path": "mods/lithium-fabric-0.26.3+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/fWv5bnZk/lithium-fabric-0.26.3%2Bmc26.3.jar",
+      "sha512": "2ca92fb530135d2baddf0ba4cc4f93976234876a38c4aa02b487b2552400f005afcfbeebf5373fb4396fe2020537a42d7597b8da5a52b904355ef51d5fef07ad",
+      "size": 919892,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "gvQqBUqZ",
+        "versionId": "fWv5bnZk"
+      }
+    },
+    {
+      "id": "immediatelyfast",
+      "name": "ImmediatelyFast",
+      "version": "1.17.1+26.3-fabric",
+      "description": "Speed up immediate mode rendering in Minecraft",
+      "group": "performance",
+      "path": "mods/ImmediatelyFast-Fabric-1.17.1+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/5ZwdcRci/versions/3MP9UR23/ImmediatelyFast-Fabric-1.17.1%2B26.3.jar",
+      "sha512": "8e139589fd995bce3d485a34d92a07243964212f7ed2e4fc2f6de5b9a74d0f59b03252e7ce40c64e006cf3e21bed5de27b830d33ef048b286e041f6178ad8428",
+      "size": 99586,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "5ZwdcRci",
+        "versionId": "3MP9UR23"
+      }
+    },
+    {
+      "id": "entityculling",
+      "name": "Entity Culling",
+      "version": "1.11.3",
+      "description": "Using async path-tracing to hide Block-/Entities that are not visible",
+      "group": "performance",
+      "path": "mods/entityculling-fabric-1.11.3-mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/NNAgCjsB/versions/X1g3VhTx/entityculling-fabric-1.11.3-mc26.3.jar",
+      "sha512": "b6209bb62d72376d3fd284da137ec93a6dd38ebe5fd38ab9190deeade68b5b7f4bf915f4abcb4a807afe18cb9f0b59e11be789d46df6f0e6f64388ed2edc284d",
+      "size": 1508547,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "NNAgCjsB",
+        "versionId": "X1g3VhTx"
+      }
+    },
+    {
+      "id": "ferrite-core",
+      "name": "FerriteCore",
+      "version": "9.0.0-fabric",
+      "description": "Memory usage optimizations",
+      "group": "performance",
+      "path": "mods/ferritecore-9.0.0-fabric.jar",
+      "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/d5ddUdiB/ferritecore-9.0.0-fabric.jar",
+      "sha512": "d81fa97e11784c19d42f89c2f433831d007603dd7193cee45fa177e4a6a9c52b384b198586e04a0f7f63cd996fed713322578bde9a8db57e1188854ae5cbe584",
+      "size": 72677,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "uXXizFIs",
+        "versionId": "d5ddUdiB"
+      }
+    },
+    {
+      "id": "dynamic-fps",
+      "name": "Dynamic FPS",
+      "version": "3.11.10",
+      "description": "Reduce resource usage while Minecraft is in the background, idle, or on battery.",
+      "group": "performance",
+      "path": "mods/dynamic-fps-3.11.10+minecraft-26.3.0-fabric.jar",
+      "url": "https://cdn.modrinth.com/data/LQ3K71Q1/versions/Jwq069rR/dynamic-fps-3.11.10%2Bminecraft-26.3.0-fabric.jar",
+      "sha512": "7976d11411babfa3ac0c38898f26ee6192f22a4f595b637eeae3cc5185f326c0e4b9fd7d00b3d7e8d020dd861295f0df52f9a9d7c67e88946d0ba9fff4a9f894",
+      "size": 189474,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "LQ3K71Q1",
+        "versionId": "Jwq069rR"
+      }
+    },
+    {
+      "id": "krypton",
+      "name": "Krypton",
+      "version": "0.3.2",
+      "description": "A mod to optimize the Minecraft networking stack",
+      "group": "performance",
+      "path": "mods/krypton-0.3.2.jar",
+      "url": "https://cdn.modrinth.com/data/fQEb0iXm/versions/UugdIYJw/krypton-0.3.2.jar",
+      "sha512": "d1d57ebd41395b75b01f130cd9503eb8d208212424a399ff9f367f50be8fbc1c6472442b33c686e777c3148f6a609520e8fb732c755157c358cb207fd4d1123a",
+      "size": 268849,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "fQEb0iXm",
+        "versionId": "UugdIYJw"
+      }
+    },
+    {
+      "id": "sodium-extra",
+      "name": "Sodium Extra",
+      "version": "mc26.3-0.9.5+fabric",
+      "description": "A Sodium addon that adds features that shouldn't be in Sodium.",
+      "group": "performance",
+      "path": "mods/sodium-extra-fabric-0.9.5+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/PtjYWJkn/versions/fs5l9Q1U/sodium-extra-fabric-0.9.5%2Bmc26.3.jar",
+      "sha512": "785632a8e0081a207124ad72f0862216902b89f40d4133d91b9f9553c0fe345478685630505eaba2fd6e49fdcc388414dd1ad9694cd15a0c29a8fbe0bec8d022",
+      "size": 481973,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "PtjYWJkn",
+        "versionId": "fs5l9Q1U"
+      }
+    },
+    {
+      "id": "reeses-sodium-options",
+      "name": "Reese's Sodium Options",
+      "version": "mc26.3-2.2.5+fabric",
+      "description": "Alternative Options Menu for Sodium",
+      "group": "performance",
+      "path": "mods/reeses-sodium-options-fabric-2.2.5+mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/Bh37bMuy/versions/EfchygKx/reeses-sodium-options-fabric-2.2.5%2Bmc26.3.jar",
+      "sha512": "9c6f335618c1ec03cf9030cd88cdc32be5457bf4fbabd49c76ed68df53530730cf4681ec3742f2c6efbd48cb2b784f24c636977a95d78df62af1214ec5488be0",
+      "size": 258082,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "Bh37bMuy",
+        "versionId": "EfchygKx"
+      }
+    },
+    {
+      "id": "badoptimizations",
+      "name": "BadOptimizations",
+      "version": "2.4.1",
+      "description": "Optimization mod that focuses on things other than rendering",
+      "group": "performance",
+      "path": "mods/BadOptimizations-2.4.1-26.3-fabric.jar",
+      "url": "https://cdn.modrinth.com/data/g96Z4WVZ/versions/Sp0ctspw/BadOptimizations-2.4.1-26.3-fabric.jar",
+      "sha512": "048a0979807afb96bae7801b7445746c985081bb55fab9b80b286036234a9869cc84f83c40ab77a2600b7e06ad44178ee17935b706b751c9b38f87ebc6e180f8",
+      "size": 60760,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "g96Z4WVZ",
+        "versionId": "Sp0ctspw"
+      }
+    },
+    {
+      "id": "moreculling",
+      "name": "More Culling",
+      "version": "1.9.1",
+      "description": "A mod that changes how multiple types of culling are handled in order to improve performance",
+      "group": "performance",
+      "path": "mods/moreculling-fabric-26.3-1.9.1.jar",
+      "url": "https://cdn.modrinth.com/data/51shyZVL/versions/5jIORlSK/moreculling-fabric-26.3-1.9.1.jar",
+      "sha512": "93ae8cfe7b07391ca2966a86a60798fe7f37c2092545ed52a74d01a405b66cc5ecb236e303dc5c966a5d1ac20480e88c4f35b1d7b75a31c790a32bf58551a909",
+      "size": 297173,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "51shyZVL",
+        "versionId": "5jIORlSK"
+      }
+    },
+    {
+      "id": "fast-ip-ping",
+      "name": "Fast IP Ping",
+      "version": "v1.0.12-mc26.3",
+      "description": "Yeet the laggy reversed DNS lookup for literal IP server addresses",
+      "group": "performance",
+      "path": "mods/fast-ip-ping-v1.0.12-mc26.3.jar",
+      "url": "https://cdn.modrinth.com/data/9mtu0sUO/versions/N6hOHbOO/fast-ip-ping-v1.0.12-mc26.3.jar",
+      "sha512": "b81e57aff8e161d75a1ca84576db89c7a0d874da50eb7f8ca17c3391bf75be2243db3d56a76294abdf84bca81eb78bb2613c380f4ab70f0f2c7119f08703b813",
+      "size": 11310,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "9mtu0sUO",
+        "versionId": "N6hOHbOO"
+      }
+    },
+    {
+      "id": "fabric-api",
+      "name": "Fabric API",
+      "version": "0.166.0+26.3",
+      "description": "Lightweight and modular API providing common hooks and intercompatibility measures utilized by mods using the Fabric toolchain.",
+      "group": "library",
+      "path": "mods/fabric-api-0.166.0+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/998R2rNP/fabric-api-0.166.0%2B26.3.jar",
+      "sha512": "de0d1a502cfcfcc594e0338e91c2fcf92a1239d47904ac2c3c50980ee132c676dba6abd81cd9449cdb0383657683c286f5bfc5c1bc1609c6b13bd569d36351d2",
+      "size": 1797522,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "P7dR8mSH",
+        "versionId": "998R2rNP"
+      }
+    },
+    {
+      "id": "modmenu",
+      "name": "Mod Menu",
+      "version": "21.0.0",
+      "description": "Adds a mod menu to view the list of mods you have installed.",
+      "group": "library",
+      "path": "mods/modmenu-21.0.0.jar",
+      "url": "https://cdn.modrinth.com/data/mOgUt4GM/versions/kyy7dbrZ/modmenu-21.0.0.jar",
+      "sha512": "588c0c557963f4778572ee81bfafc190b332c26d5926c5fe7e3e1614dcf8e14f58e3bc80a97694521dd05907e9753a7c8575048ea769e4dbf40a3db74a4e2606",
+      "size": 856779,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "mOgUt4GM",
+        "versionId": "kyy7dbrZ"
+      }
+    },
+    {
+      "id": "placeholder-api",
+      "name": "Text Placeholder API",
+      "version": "3.2.0+26.3",
+      "description": "Placeholder and Text manipulation library for your Minecraft mods.",
+      "group": "library",
+      "path": "mods/placeholder-api-3.2.0+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/eXts2L7r/versions/lXytLqWj/placeholder-api-3.2.0%2B26.3.jar",
+      "sha512": "eb2bb31e51068aad2581b7864ea7b11b1209ba1c2b27551cd5837d9b312b818b73bb47c06374b46b99b73401c62c6b6c115f702c55aed6afd467ad8ad6448de4",
+      "size": 254959,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "eXts2L7r",
+        "versionId": "lXytLqWj"
+      }
+    },
+    {
+      "id": "cloth-config",
+      "name": "Cloth Config API",
+      "version": "26.3.159+fabric",
+      "description": "Configuration Library for Minecraft Mods",
+      "group": "library",
+      "path": "mods/cloth-config-fabric-26.3.159.jar",
+      "url": "https://cdn.modrinth.com/data/9s6osm5g/versions/fg2uyxOW/cloth-config-fabric-26.3.159.jar",
+      "sha512": "8924e19d41845096724fa10f3717bc51964a0edbbbcad0ff1e6c6187a398b08f356e49579a657c2dc44a7f92e3850771f3ca70bf8c1f654de60425163b91dbb1",
+      "size": 1135009,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "9s6osm5g",
+        "versionId": "fg2uyxOW"
+      }
+    },
+    {
+      "id": "yacl",
+      "name": "YetAnotherConfigLib (YACL)",
+      "version": "3.9.7+26.3-fabric",
+      "description": "A builder-based configuration library for Minecraft!",
+      "group": "library",
+      "path": "mods/yet_another_config_lib_v3-3.9.7+26.3-fabric.jar",
+      "url": "https://cdn.modrinth.com/data/1eAoo2KR/versions/s9SjoFu1/yet_another_config_lib_v3-3.9.7%2B26.3-fabric.jar",
+      "sha512": "f3957028dd31cae78f08aee3e768f61bd12c4c8423257d357bc3c1a2172047c769d37901f99775c7ffff1e5ee794025dc72738b2869cab06f1c2811841d68b24",
+      "size": 1125377,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "1eAoo2KR",
+        "versionId": "s9SjoFu1"
+      }
+    },
+    {
+      "id": "noxesium",
+      "name": "Noxesium",
+      "version": "3.3.0",
+      "description": "Improves play experience on multiplayer servers.",
+      "group": "library",
+      "path": "mods/noxesium-fabric-3.3.0.jar",
+      "url": "https://cdn.modrinth.com/data/Kw7Sm3Xf/versions/ImLtknzg/noxesium-fabric-3.3.0.jar",
+      "sha512": "f1f496acec18977712cd5a8a9c9d94d9e58730838e362a58d9baa5a429e667020e8df727356c6444c801da30fa3e8e7c2e562c10b15d47b88c95dc36161ec514",
+      "size": 1514170,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "Kw7Sm3Xf",
+        "versionId": "ImLtknzg"
+      }
+    },
+    {
+      "id": "server-resource-pack-checker",
+      "name": "Server Resourcepack Checker",
+      "version": "fabric-1.2.2+26.3",
+      "description": "Only load server resource packs when necessary",
+      "group": "library",
+      "path": "mods/resourcepackchecker-fabric-1.2.2+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/fCpuZIcM/versions/MIlOIpGV/resourcepackchecker-fabric-1.2.2%2B26.3.jar",
+      "sha512": "5b5c8bed3ab3edbccd52f1018de777d4f7e440adde0afb042be4148748705a2cf11526303022d03b9a23f63b0f6be0f772210adaa224b0876256dbf15a5801e1",
+      "size": 220338,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "fCpuZIcM",
+        "versionId": "MIlOIpGV"
+      }
+    },
+    {
+      "id": "keycps",
+      "name": "KeyCps",
+      "version": "1.6.2+26.3",
+      "description": "Keystrokes + CPS overlay that follows your key bindings, counts keyboard repeat, and is fully configurable in-game (Mod Menu supported).",
+      "group": "qol",
+      "path": "mods/keycps-1.6.2+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/qjIgtNcw/versions/abb65mWE/keycps-1.6.2%2B26.3.jar",
+      "sha512": "8d872ac3ea4e81089357f776ec6cce9f07ea3a31f3f8f7aaef576f7fcf7d51a54fdf72e86f03d767fa9b8e6b3c7b59e3c35fafa57b63bc3b248f2acd0b4590c6",
+      "size": 54752,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "qjIgtNcw",
+        "versionId": "abb65mWE"
+      }
+    },
+    {
+      "id": "toggle-sprint-display",
+      "name": "Toggle Sprint Display",
+      "version": "2.0.2",
+      "description": "Shows whether you're actually sprinting in the HUD.",
+      "group": "qol",
+      "path": "mods/toggle-sprint-display-2.0.2.jar",
+      "url": "https://cdn.modrinth.com/data/shVMaevq/versions/RfqFKdEm/toggle-sprint-display-2.0.2.jar",
+      "sha512": "0632a96265a3ea08aaae49b6680a1ecf9559e708fce8227c2b2fb309cd6204e101dfab82014b61a556d80bd617866315b1586662cf06ddc486cbc6793dfc5b15",
+      "size": 27341,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "shVMaevq",
+        "versionId": "RfqFKdEm"
+      }
+    },
+    {
+      "id": "status-effect-bars",
+      "name": "Status Effect Bars",
+      "version": "1.0.12",
+      "description": "Adds customizable bars to the status effects overlay to show the remaining duration of effects.",
+      "group": "qol",
+      "path": "mods/status-effect-bars-1.0.12.jar",
+      "url": "https://cdn.modrinth.com/data/x02cBj9Y/versions/aAXJqboy/status-effect-bars-1.0.12.jar",
+      "sha512": "fc82971d4e91b3e1c0e2919267f16fb29d0690ca1765bae160628b7e6d8552c4c724143b6172e27b4b9d7c8e70fc64bdf428b60e954fa6adc7ae56a6af5abf0b",
+      "size": 44942,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "x02cBj9Y",
+        "versionId": "aAXJqboy"
+      }
+    },
+    {
+      "id": "mouse-tweaks",
+      "name": "Mouse Tweaks",
+      "version": "26.3-2.31-fabric",
+      "description": "Enhances inventory management by adding various functions to the mouse buttons. ",
+      "group": "qol",
+      "path": "mods/MouseTweaks-fabric-mc26.3-2.31.jar",
+      "url": "https://cdn.modrinth.com/data/aC3cM3Vq/versions/LeMuMhLv/MouseTweaks-fabric-mc26.3-2.31.jar",
+      "sha512": "61c011308b5d1d0b2163473cbbc1ad0f1b3ac873b77e3e9ff67ccb437a946fbe5f34077281ebd2b91647324969d319f6499ac4b319cfcb9ea027bac47a52c081",
+      "size": 74569,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "aC3cM3Vq",
+        "versionId": "LeMuMhLv"
+      }
+    },
+    {
+      "id": "appleskin",
+      "name": "AppleSkin",
+      "version": "3.0.10+mc26.3",
+      "description": "Food/hunger-related HUD improvements",
+      "group": "qol",
+      "path": "mods/appleskin-fabric-mc26.3-3.0.10.jar",
+      "url": "https://cdn.modrinth.com/data/EsAfCjCV/versions/PHjDtQay/appleskin-fabric-mc26.3-3.0.10.jar",
+      "sha512": "17d257af419b7530aa8617c2e8c0e4bbfabcf888f26655790e0188e7957e0bcd931f85f9a4c69fd27e889dee5082cf7b2b8741a14a6ed4425e9ef4bfe13a8b8c",
+      "size": 180194,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "EsAfCjCV",
+        "versionId": "PHjDtQay"
+      }
+    },
+    {
+      "id": "betterf3",
+      "name": "BetterF3",
+      "version": "20.0.0",
+      "description": "BetterF3 is a mod that replaces Minecraft's original debug HUD with a highly customizable, more human-readable HUD.",
+      "group": "qol",
+      "path": "mods/BetterF3-20.0.0-Fabric-26.3.jar",
+      "url": "https://cdn.modrinth.com/data/8shC1gFX/versions/XB7u4eSf/BetterF3-20.0.0-Fabric-26.3.jar",
+      "sha512": "1e78531358f690404efe98b26de1024284078596785420a92ff5dba052003064e87537936c006c3c58470ccdc2ed6ae69a65f26ca534366e90d97470f2973118",
+      "size": 719577,
+      "required": true,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "8shC1gFX",
+        "versionId": "XB7u4eSf"
+      }
+    },
+    {
+      "id": "cubes-without-borders",
+      "name": "Cubes Without Borders",
+      "version": "5.0.0+26.3",
+      "description": "Allows you to play Minecraft in a borderless fullscreen window.",
+      "group": "qol",
+      "path": "mods/cwb-5.0.0+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/ETlrkaYF/versions/26KCwNI9/cwb-5.0.0%2B26.3.jar",
+      "sha512": "abd2338408c3e46f02ef8741379d02a4bf34e6cf952d707f6f3cb145b9333c20b80bc787c03432a292d61e82a9453b9ebecd0ba3c7d50450b5087322914c1efc",
+      "size": 95121,
+      "required": false,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "ETlrkaYF",
+        "versionId": "26KCwNI9"
+      }
+    },
+    {
+      "id": "variants-cit",
+      "name": "Variants-CIT",
+      "version": "5.8.1+26.3",
+      "description": "Alternative CIT format for large collections of variants with repeating patterns.",
+      "group": "qol",
+      "path": "mods/variants-cit-5.8.1+26.3.jar",
+      "url": "https://cdn.modrinth.com/data/jURjbCaq/versions/32TLVxmW/variants-cit-5.8.1%2B26.3.jar",
+      "sha512": "e0a0c7d0d95ad83ba182d1b49e60a14d209cb7a71034c9e53076da4a4f6219238fe7ebe87dbc03a3daeacc3e5f053b4e4600725ac6a68f71d3a34714bbeba476",
+      "size": 422641,
+      "required": false,
+      "defaultEnabled": true,
+      "modrinth": {
+        "projectId": "jURjbCaq",
+        "versionId": "32TLVxmW"
+      }
+    }
+  ],
+  "configs": [
+    {
+      "path": "config/cubeutilityclient/default-options.txt",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-cubeutilityclient-default-options.txt",
+      "sha512": "f83e65189bfb0cb1a98636dbe3ac27e4ca09c81e866f43cc0c407033e6282592cbadc126c583553f26ed61a92f166ad050afcceb0b6cc2ca53cb5a3e60bf4cb1",
+      "size": 6510,
+      "policy": "always"
+    },
+    {
+      "path": "config/cubeutility/config.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-cubeutility-config.json",
+      "sha512": "24bc79f2b52eb359101d697f8134d8966385513fd5c31a9c5ecd3ab3bf87df5f467d59f62e3139974d7f525c8a2336b7cefa12113bada7ef18d1932930421809",
+      "size": 9974,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/cubeutility/bridges.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-cubeutility-bridges.json",
+      "sha512": "a9569f521ff1ad20b5fb3060ad0230c62a423843c94e63cb1ec467b3db344dac495a9ccee5820cb4d522eda8d3eae196cd404c4157c4bb0e3956123478f5ca23",
+      "size": 2935,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/cubeutility/build_limits.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-cubeutility-build_limits.json",
+      "sha512": "94cd052e58658dd9cb52fbb7f20d749a4e4c20ef506bda59e023c8cb0ae9db26951b1195e70cc680ecacf124a8ccb1759da819360dbb70592814f5203ce49b66",
+      "size": 47,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/sodium-options.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-sodium-options.json",
+      "sha512": "698e3f2bff08ced9640d748d3cf1d1d4725f1a3f176be20f64ea774a09c7086287f74d0a1eec17890551bd5ad31cecaf4514f9db469cf2f19d5b0fee9e80010a",
+      "size": 744,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/sodium-extra-options.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-sodium-extra-options.json",
+      "sha512": "856fdf2e52f2dc7f1a7824bb11cfa82dab86da082413eb2553d347cb2708c5c3a56fb223fb64dbb754d1f63acaa746f046056ccea7a88105a085cd7eece58a12",
+      "size": 6390,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/entityculling.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-entityculling.json",
+      "sha512": "88ef464cb3681773dc18fe7c4fbcb7ec49f86190e462aeea2fb5a7ef01c0d151d4860a167825234a3829cce658c3bb777d46940307c4095e46b2ad51df1c8ef6",
+      "size": 2248,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/immediatelyfast.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-immediatelyfast.json",
+      "sha512": "471705327bf694ffae4a9c86011192ab76b12a20a97bbe6e021e0d6207aebee2ec311e095fd965f2b09734d6a7e4b682901a52b2802a08d56a07a4d1a14b8af8",
+      "size": 951,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/moreculling.toml",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-moreculling.toml",
+      "sha512": "8ee9ef0ea045c14547e8ccc22ad6f9d32c7d187edbabe279071e02103aa75e9e3d336c29ca68ced961100d6ff8937188b433a47fd2b104d06f4702f5580a30c3",
+      "size": 495,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/dynamic_fps.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-dynamic_fps.json",
+      "sha512": "83666f352c8bacf7578f2d512c4d6cc0c1f7dcd9cdc1696259228d603c0de17b020b6aea73f6fa90a2b34f318573fa4cd5dba4b4eab2a9597c0ed38d28d76a89",
+      "size": 163,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/cwb.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-cwb.json",
+      "sha512": "dc06b1813e1648e7cb0574875c2585bc60ede2b08c544138ab200d4df54edc6f9ad18540171b14b93806d8256de5a8334aa23a5fed467736b91f1adff7d285d4",
+      "size": 359,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/badoptimizations.txt",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-badoptimizations.txt",
+      "sha512": "32eb792cbbae2a58fd510354a514a4cf7243d2dc0dca87eb67e0d41731d056b3289db8460505802ad2d89ad6167d65bf350a5459c0e57602fa7992334ac40618",
+      "size": 3540,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/ewoptimizer.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-ewoptimizer.json",
+      "sha512": "07c6f70fbbeb2c54d2c3dbe4571bdeddb6ca262dd9845788f4875e3b05a226feb8fc0ec531a8e2ca8b2a824a15f3ec7194f02005b388e3317d45b4f2790f8922",
+      "size": 1423,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/lvl_rank.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-lvl_rank.json",
+      "sha512": "ac3abcc6716dac9ac87b1f82d0dce2a97eb021c6bfd44f22aa6f4d776a62f1cde4edf4a53a2e8ec571939ab782f6dd310aaf0614a315980bf95c935564e5ca51",
+      "size": 1497,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/cubeautovote.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-cubeautovote.json",
+      "sha512": "20360f894f5a005b6f34ed385d14e41f83dff41c7b27fff0be69d076ec5fc94420d75c07766ca6bb0653fdf0b713428b4bc9eeeed6a9f6d6c9525dde690c9357",
+      "size": 210,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/spectatorinside.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-spectatorinside.json",
+      "sha512": "265beffbb71e5bf9f95255bb1742793c11e587580f5040123cdcddd86a07e5b3aff9f746801554ae4bfbb00cc600e787edb395ab237ca0766ac63eb0a602177a",
+      "size": 820,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/noxesium.toml",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-noxesium.toml",
+      "sha512": "8dbe9474f989212765f3022757c60e2c61b89ec805d282008c6b730fac0c4956f90894ad5c65c97753a4da5e64afc1cd169e8640bef4cef1db44cdf8dd40fa1d",
+      "size": 58,
+      "policy": "if-missing"
+    },
+    {
+      "path": "config/resourcepackchecker/resourcepackchecker.properties",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-1/config-resourcepackchecker-resourcepackchecker.properties",
+      "sha512": "eca945a63e43dd8ce183e0559ae486ac1aa86d7408972d97a088cb03b9031a3a3e276647473aef71ca92ee126dc7047b808101f4a352c9a442fe5fee09da3792",
+      "size": 534,
+      "policy": "if-missing"
+    }
+  ]
+}
