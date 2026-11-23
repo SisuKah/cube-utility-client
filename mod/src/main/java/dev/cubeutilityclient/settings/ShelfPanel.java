@@ -269,7 +269,7 @@ final class ShelfPanel {
             float size = p.iconSize, ix = this.x + p.pad, iy = Math.round(top + (this.h - size) / 2f);
             float drawn = size * pop, dx = ix - (drawn - size) / 2f, dy = iy - (drawn - size) / 2f;
             if (this.mod.builtIn) {
-                tnt(graphics, dx, dy, drawn, p.g);
+                tnt(graphics, paint, dx, dy, drawn, p.g, k);
             } else if (this.icon != null) {
                 paint.texture(this.icon, false).rect(dx, dy, dx + drawn, dy + drawn, Rgb.alpha(0xFFFFFF, k));
             } else {
@@ -359,13 +359,33 @@ final class ShelfPanel {
         }
     }
 
+    /** The TNT block's item, once items can be made (not on the title screen before a world has loaded). */
+    private static ItemStack tntItem;
+
     /** A TNT block where a mod's icon would be: the TNT timer is part of this client. */
-    private static void tnt(GuiGraphicsExtractor graphics, float x, float y, float size, float g) {
+    private static void tnt(GuiGraphicsExtractor graphics, Paint paint, float x, float y, float size, float g, float k) {
+        if (tntItem == null && Minecraft.getInstance().level != null) {
+            try {
+                tntItem = new ItemStack(Items.TNT);
+            } catch (RuntimeException notYet) {
+                // Drawn by hand below until it works.
+            }
+        }
+        if (tntItem == null) {
+            // Items get their data with the first world; until then, a TNT block drawn by hand.
+            QuadBatch tile = paint.solid();
+            Paint.roundedRect(tile, x, y, size, size, Math.max(3f, size * 0.12f), 0f, Rgb.alpha(0xC8372D, k), 0);
+            tile.rect(x, Math.round(y + size * 0.36f), x + size, Math.round(y + size * 0.64f), Rgb.alpha(0xEFE6DA, k));
+            FontDescription font = Fonts.strong(Math.max(8f, Math.min(32f, Math.round(size * 0.24f))));
+            float w = Paint.measure("TNT", font, 0f);
+            paint.text("TNT", font, Math.round(x + (size - w) / 2f), Math.round(y + size / 2f + Fonts.size(font) * 0.36f), Rgb.alpha(0x2A1A16, k), 0f);
+            return;
+        }
         var pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(x / g, y / g);
         pose.scale(size / g / 16f, size / g / 16f);
-        graphics.fakeItem(new ItemStack(Items.TNT), 0, 0);
+        graphics.fakeItem(tntItem, 0, 0);
         pose.popMatrix();
     }
 

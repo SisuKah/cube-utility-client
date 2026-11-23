@@ -20,12 +20,24 @@ public abstract class Setting {
     /** Takes effect after Minecraft restarts. */
     public final boolean restart;
     private final BooleanSupplier enabled;
+    /** Belongs to the setting above it (a feature's own settings under its switch): drawn indented. */
+    private boolean child;
 
     Setting(String name, String description, boolean restart, BooleanSupplier enabled) {
         this.name = name;
         this.description = description == null ? "" : description.replaceAll("\\s+", " ").trim();
         this.restart = restart;
         this.enabled = enabled;
+    }
+
+    /** Marks this as belonging to the setting above it, which the page shows by indenting it. */
+    public Setting asChild() {
+        this.child = true;
+        return this;
+    }
+
+    public boolean isChild() {
+        return this.child;
     }
 
     /** Some settings only apply while another is on; the page greys them out meanwhile. */
@@ -150,10 +162,12 @@ public abstract class Setting {
         }
     }
 
-    /** A button: opens more of the mod's settings on their own screen, or resets a group. */
+    /**
+     * A button: opens more of the mod's settings on their own screen, or resets a group. Without a
+     * label the row is just its name and description.
+     */
     public static final class Action extends Setting {
-        /** The button's label, in capitals: "OPEN", "RESET". */
-        public final String button;
+        private final Supplier<String> button;
         private final Runnable run;
 
         public Action(String name, String description, BooleanSupplier enabled, Runnable run) {
@@ -161,9 +175,24 @@ public abstract class Setting {
         }
 
         public Action(String name, String description, BooleanSupplier enabled, String button, Runnable run) {
+            this(name, description, enabled, () -> button, run);
+        }
+
+        /** A button whose label can change while it shows ("JOIN", then "LEAVE"). */
+        public Action(String name, String description, BooleanSupplier enabled, Supplier<String> button, Runnable run) {
             super(name, description, false, enabled);
             this.button = button;
             this.run = run;
+        }
+
+        /** The button's label, in capitals: "OPEN", "RESET"; empty for no button. */
+        public String button() {
+            try {
+                String label = this.button.get();
+                return label == null ? "" : label.toUpperCase(java.util.Locale.ROOT);
+            } catch (Throwable error) {
+                return "";
+            }
         }
 
         public void run() {
@@ -171,10 +200,17 @@ public abstract class Setting {
         }
     }
 
-    /** A line of text among the settings, with nothing to change. */
+    /** A line of text among the settings, with nothing to change; as a bullet, one point of a list. */
     public static final class Note extends Setting {
+        public final boolean bullet;
+
         public Note(String text) {
+            this(text, false);
+        }
+
+        public Note(String text, boolean bullet) {
             super(text, "", false, null);
+            this.bullet = bullet;
         }
     }
 }

@@ -23,10 +23,11 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.FontDescription;
 
 /**
- * A mod's settings drawn by the page itself, every mod in the same style: each setting's name
- * and what it does on the left, and a switch, slider, choice or text field on the right. A mod
- * with several categories gets a row of chips to switch between them. Changes go to the mod
- * and are saved as soon as they're made, like Minecraft's own options.
+ * A mod's page drawn by the page itself, every mod in the same style: what the mod does, then
+ * each setting's name and what it does on the left, and a switch, slider, choice, text field or
+ * button on the right. A feature's own settings sit indented under its switch. A mod with several
+ * categories gets a row of chips to switch between them. Changes go to the mod and are saved as
+ * soon as they're made, like Minecraft's own options.
  */
 final class OptionsPanel {
     private static final int TEXT = 0xE9EFEE, TEXT_2 = 0x9AABA9, TEXT_3 = 0x7E8F8D, GOLD = 0xE4C084, GOLD_DIM = 0xCDA76A, GOLD_LIGHT = 0xF7E6C2, INK = 0x15100A,
@@ -37,6 +38,8 @@ final class OptionsPanel {
 
     private enum Kind {
         HEADER,
+        /** Space between two untitled groups. */
+        GAP,
         BANNER,
         ROW,
         MORE
@@ -70,6 +73,8 @@ final class OptionsPanel {
     private float listTop, listBottom, contentHeight;
     private FontDescription nameFont, descFont, headFont, valueFont, chipFont, buttonFont, badgeFont;
     private float padX, padY, gap, gutter, controlW, controlH, toggleW, toggleH, headH, lineGap, chipH, chipPad, buttonPad, spacing;
+    /** How far a feature's own settings sit in, the room a bullet takes, and the space between groups of settings. */
+    private float indent, bulletW, sectionGap;
 
     private Setting.Slider dragging;
     private float dragFrom, dragTo;
@@ -128,6 +133,9 @@ final class OptionsPanel {
         this.chipPad = Math.round(Math.max(10f, 14f * s));
         this.buttonPad = Math.round(Math.max(12f, 18f * s));
         this.controlW = Math.round(Math.max(120f, Math.min((w - this.gutter) * 0.38f, 280f * s)));
+        this.indent = Math.round(Math.max(12f, 20f * s));
+        this.bulletW = Math.round(Math.max(10f, 14f * s));
+        this.sectionGap = Math.round(Math.max(8f, 14f * s));
         this.stale = true;
     }
 
@@ -143,11 +151,20 @@ final class OptionsPanel {
             this.items.add(new Item(Kind.BANNER, null, null, lines, top, height, false));
             top += height + Math.round(Math.max(6f, 10f * this.s));
         }
+        boolean first = true;
         for (SettingsModel.Section section : this.model.pages().get(this.page).sections()) {
+            if (section.settings().isEmpty()) {
+                continue;
+            }
             if (!section.title().isBlank()) {
                 this.items.add(new Item(Kind.HEADER, null, section.title().toUpperCase(Locale.ROOT), List.of(), top, this.headH, false));
                 top += this.headH;
+            } else if (!first) {
+                // Untitled groups (one feature and its settings) still stand apart.
+                top += this.sectionGap;
+                this.items.add(new Item(Kind.GAP, null, null, List.of(), top - this.sectionGap, this.sectionGap, false));
             }
+            first = false;
             for (Setting setting : section.settings()) {
                 Item row = this.row(setting, top, rowW);
                 this.items.add(row);
@@ -188,11 +205,15 @@ final class OptionsPanel {
     }
 
     private Item row(Setting setting, float top, float rowW) {
-        if (setting instanceof Setting.Note) {
-            List<String> lines = wrap(setting.name, this.descFont, rowW - 2f * this.padX, 8);
-            return new Item(Kind.ROW, setting, null, lines, top, Math.round(2f * this.padY + this.textHeight(this.descFont, lines.size())), false);
+        if (setting instanceof Setting.Note note) {
+            float inset = note.bullet ? this.bulletW : 0f;
+            List<String> lines = wrap(setting.name, this.noteFont(), rowW - 2f * this.padX - inset - this.indentOf(setting), 12);
+            // Bullets sit close together, like a list.
+            float pad = note.bullet ? Math.round(this.padY * 0.45f) : this.padY;
+            return new Item(Kind.ROW, setting, null, lines, top, Math.round(2f * pad + this.textHeight(this.noteFont(), lines.size())), false);
         }
-        float textW = rowW - 2f * this.padX - this.controlWidth(setting) - this.gap;
+        float control = this.controlWidth(setting);
+        float textW = rowW - 2f * this.padX - control - (control > 0f ? this.gap : 0f) - this.indentOf(setting);
         // Up to three lines; the whole description shows on hover.
         List<String> lines = wrap(setting.description, this.descFont, textW, 3);
         boolean cut = !String.join(" ", lines).equals(setting.description);
@@ -212,7 +233,21 @@ final class OptionsPanel {
         if (setting instanceof Setting.Toggle) {
             return this.toggleW;
         }
-        return setting instanceof Setting.Action action ? this.buttonWidth(action.button) : this.controlW;
+        if (setting instanceof Setting.Action action) {
+            String label = action.button();
+            return label.isEmpty() ? 0f : this.buttonWidth(label);
+        }
+        return setting instanceof Setting.Note ? 0f : this.controlW;
+    }
+
+    /** How far in a row starts: a feature's own settings sit under its switch. */
+    private float indentOf(Setting setting) {
+        return setting != null && setting.isChild() ? this.indent : 0f;
+    }
+
+    /** Notes (what a mod does) read a little larger than the descriptions under settings. */
+    private FontDescription noteFont() {
+        return this.valueFont;
     }
 
     private float buttonWidth(String label) {
@@ -261,6 +296,8 @@ final class OptionsPanel {
                         tip = item;
                     }
                     switch (item.kind) {
+                        case GAP -> {
+                        }
                         case HEADER -> this.extractHeader(paint, shapes, item, top, k);
                         case BANNER -> this.extractBanner(paint, shapes, item, top, k);
                         case MORE -> this.extractMore(paint, shapes, item, top, mx, hover, k);
@@ -351,22 +388,42 @@ final class OptionsPanel {
     }
 
     private void extractLines(Paint paint, List<String> lines, float x, float top, int color) {
-        float size = Fonts.size(this.descFont);
+        this.extractLines(paint, lines, this.descFont, x, top, color);
+    }
+
+    private void extractLines(Paint paint, List<String> lines, FontDescription font, float x, float top, int color) {
+        float size = Fonts.size(font);
         float baseline = top + size * 0.8f;
         for (String line : lines) {
-            paint.text(line, this.descFont, Math.round(x), Math.round(baseline), color, 0f);
+            paint.text(line, font, Math.round(x), Math.round(baseline), color, 0f);
             baseline += size + this.lineGap;
         }
     }
 
     private void extractRow(Paint paint, QuadBatch shapes, Item item, Item previous, float top, float mx, float my, boolean hover, float k) {
         Setting setting = item.setting;
-        float left = this.x, right = this.x + this.w - this.gutter;
-        if (previous != null && previous.kind == Kind.ROW) {
+        float depth = this.indentOf(setting);
+        float left = this.x + depth, right = this.x + this.w - this.gutter;
+        boolean betweenSettings = previous != null && previous.kind == Kind.ROW && !(previous.setting instanceof Setting.Note) && !(setting instanceof Setting.Note);
+        if (betweenSettings) {
             shapes.rect(left + this.padX, top, right - this.padX, top + 1f, Rgb.alpha(0xFFFFFF, 0.05f * k));
         }
-        if (setting instanceof Setting.Note) {
-            this.extractLines(paint, item.lines, left + this.padX, top + this.padY, Rgb.alpha(TEXT_2, k));
+        if (depth > 0f) {
+            // A faint line down the side of a feature's own settings ties them to its switch.
+            float lineX = Math.round(this.x + this.padX + depth * 0.35f);
+            shapes.rect(lineX, top, lineX + 1f, top + item.height, Rgb.alpha(GOLD, 0.16f * k));
+        }
+        if (setting instanceof Setting.Note note) {
+            FontDescription font = this.noteFont();
+            float pad = note.bullet ? Math.round(this.padY * 0.45f) : this.padY;
+            float tx = left + this.padX;
+            if (note.bullet) {
+                float size = Fonts.size(font), dot = Math.max(3f, Math.round(4f * this.s));
+                float dy = Math.round(top + pad + size * 0.5f - dot / 2f);
+                Paint.capsule(shapes, Math.round(tx + 1f), dy, dot, dot, 0f, (px, py) -> Rgb.alpha(GOLD, 0.85f * k), 0, false);
+                tx += this.bulletW;
+            }
+            this.extractLines(paint, item.lines, font, tx, top + pad, Rgb.alpha(note.bullet ? TEXT : TEXT_2, (note.bullet ? 0.86f : 1f) * k));
             return;
         }
         boolean enabled = setting.enabled();
@@ -377,7 +434,7 @@ final class OptionsPanel {
 
         // The name, a restart tag when it needs one, and what it does.
         float controlW = this.controlWidth(setting);
-        float tx = left + this.padX, textW = right - left - 2f * this.padX - controlW - this.gap;
+        float tx = left + this.padX, textW = right - left - 2f * this.padX - controlW - (controlW > 0f ? this.gap : 0f);
         float nameSize = Fonts.size(this.nameFont), descSize = Fonts.size(this.descFont);
         float textTop = top + (item.height - this.textBlock(item.lines)) / 2f;
         boolean tag = setting.restart && !this.allRestart;
@@ -409,8 +466,8 @@ final class OptionsPanel {
                 this.extractChoice(paint, shapes, choice, cx, cy, over, mx < cx + this.controlW / 2f, a, k);
             } else if (setting instanceof Setting.Text text) {
                 this.extractText(paint, shapes, text, cx, cy, hover && enabled && mx >= cx && mx < cx + this.controlW, a, k);
-            } else if (setting instanceof Setting.Action action) {
-                this.extractButton(paint, shapes, action.button, cx, cy, hover && enabled && mx >= cx && mx < cx + controlW, enabled, k);
+            } else if (setting instanceof Setting.Action action && controlW > 0f) {
+                this.extractButton(paint, shapes, action.button(), cx, cy, hover && enabled && mx >= cx && mx < cx + controlW, enabled, k);
             }
         } catch (Throwable error) {
             // A value the mod can't give right now: a dash, rather than a broken page.
@@ -548,6 +605,10 @@ final class OptionsPanel {
             }
         }
         Item item = my >= this.listTop && my < this.listBottom ? this.itemAt(my) : null;
+        if (item != null && (item.kind == Kind.GAP || item.kind == Kind.HEADER || item.kind == Kind.BANNER)) {
+            this.commitEdit();
+            return true;
+        }
         if (item == null || item.setting == this.editing && this.editing != null && !this.onControl(item, mx, my)) {
             this.commitEdit();
             return this.contains(mx, my);
@@ -586,7 +647,7 @@ final class OptionsPanel {
                 this.drag(mx);
             } else if (setting instanceof Setting.Text text && onControl && this.editing != text) {
                 this.startEdit(text);
-            } else if (setting instanceof Setting.Action action && onControl) {
+            } else if (setting instanceof Setting.Action action && onControl && !action.button().isEmpty()) {
                 action.run();
             }
         } catch (Throwable error) {
@@ -762,11 +823,16 @@ final class OptionsPanel {
         }
     }
 
-    /** The tab is closing: finish any typing and save. */
+    /** The tab is closing: finish any typing, save, and let the mod tidy up. */
     void close() {
         this.commitEdit();
         this.dragging = null;
         this.save();
+        try {
+            this.model.close();
+        } catch (Throwable error) {
+            CubeUtilityClient.LOGGER.warn("Closing the settings of {} failed", this.key, error);
+        }
     }
 
     // ------------------------------------------------------------------ text

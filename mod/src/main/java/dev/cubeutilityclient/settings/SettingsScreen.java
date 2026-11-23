@@ -9,8 +9,9 @@ import dev.cubeutilityclient.render.QuadBatch;
 import dev.cubeutilityclient.render.Rgb;
 import dev.cubeutilityclient.render.SpaceTextures;
 import dev.cubeutilityclient.screen.IconButton;
-import dev.cubeutilityclient.screen.PillButton;
+import dev.cubeutilityclient.settings.model.ModPage;
 import dev.cubeutilityclient.settings.model.Models;
+import dev.cubeutilityclient.settings.model.Setting;
 import dev.cubeutilityclient.settings.model.SettingsModel;
 import dev.cubeutilityclient.shelf.Shelf;
 import dev.cubeutilityclient.shelf.ShelfMod;
@@ -19,8 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -31,21 +30,21 @@ import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 
 /**
- * One settings page for the whole client, opened with Right Shift (and from Mods). The left
- * lists tabs named for what they change, each with a line saying what it does. On the right,
- * mods built with a settings library (YACL, Cloth Config, Sodium's) or a plain settings file get
- * their settings drawn by the page itself, all alike; the others show their own settings screen
- * inside the page. Either way every option works and saves as the mod intends. Mods with
- * nothing to change don't get a tab.
+ * The Mods page, opened with Right Shift and with Mods on the title screen: every installed mod
+ * on the left under its own name, with a line saying what it does, grouped by what it's for.
+ * Picking one shows, on the right, the same page for every mod: what it does, then its settings
+ * as switches, sliders and choices drawn by the page itself, whichever library the mod built them
+ * with. A mod whose settings the page can't read gets a button to its own screen; a mod with
+ * nothing to set up says so. Changes save as they're made, through the mod's own saving.
  *
  * <p>At the top of the list, Get more offers popular mods that come with the client asleep
- * ({@link ShelfPanel}): one click switches a mod on, with no restart, and it gets a tab of its
+ * ({@link ShelfPanel}): one click switches a mod on, with no restart, and it gets a row of its
  * own under "Added mods". Under it, Browse Modrinth ({@link ModrinthPanel}) searches Modrinth and
  * adds any mod through the launcher, ready the next time the game starts.
  */
 public final class SettingsScreen extends Screen {
     private static final int TEXT = 0xE9EFEE, TEXT_2 = 0x9AABA9, TEXT_3 = 0x7E8F8D, GOLD = 0xE4C084, GOLD_DIM = 0xCDA76A, TEAL = 0x46C2B8;
-    /** Settings screens are laid out at least this wide (GUI units) when the window allows. */
+    /** The mods' settings are laid out at least this wide (GUI units) when the window allows. */
     private static final int CHILD_MIN_WIDTH = 316;
     /** Stand for Get more and Browse Modrinth where a tab's id goes. */
     private static final String SHELF = "get-more", MODRINTH = "modrinth";
@@ -56,7 +55,7 @@ public final class SettingsScreen extends Screen {
     private static String remembered = "cubeutility";
 
     private final Screen parent;
-    /** The tabs, minus mods that are still asleep in Get more. */
+    /** The installed mods, minus those still asleep in Get more. */
     private List<ModEntry> tabs = visibleTabs();
     private final List<Row> rows = new ArrayList<>();
     /** Get more, while it shows on the right instead of a tab's settings. */
@@ -68,20 +67,16 @@ public final class SettingsScreen extends Screen {
     private final long opened = System.nanoTime();
     private long lastFrame = System.nanoTime();
     private ModEntry selected;
-    private EmbeddedScreen child;
-    /** The chosen mod's settings, drawn by the page itself. */
+    /** The chosen mod's page: what it does and its settings, drawn by the page itself. */
     private OptionsPanel panel;
-    /** The mouse went down inside the mod's settings, so drags and keys go there too. */
-    private boolean childFocused;
-    /** The chosen mod's settings failed to show inside the page. */
-    private boolean failed;
-    /** A settings screen is being opened; if the page is set up again meanwhile, it switched away. */
+    /** A mod's settings screen is being read; if the page is set up again meanwhile, it switched away. */
     private boolean opening, reentered;
-    /** The page whose settings screen is opening right now, and what that screen switched to. */
+    /** The page whose mod's settings screen is being read right now, and what that screen switched to. */
     private static SettingsScreen adopting;
+    /** While above zero, nothing may change the screen (a mod's screen closing quietly, to save). */
+    private static int quiet;
     private Screen replacement;
     private IconButton close;
-    private PillButton openFull;
     private String query = "";
     private boolean searchFocused;
     /** The window's text input is on, for the search or a settings text field. */
@@ -98,7 +93,7 @@ public final class SettingsScreen extends Screen {
     }
 
     public SettingsScreen(Screen parent) {
-        super(Component.literal("Cube Utility Client settings"));
+        super(Component.literal("Mods"));
         this.parent = parent;
     }
 
@@ -145,9 +140,6 @@ public final class SettingsScreen extends Screen {
         float size = Math.round(Math.max(30f, 38f * this.s));
         this.close = this.addRenderableWidget(new IconButton(LineIcon.CLOSE, Component.literal("Close"), this::onClose));
         this.close.place(Math.round(this.px + this.pw - this.pad - size), Math.round(this.py + this.pad), size, Math.round(size * 0.42f), this.g);
-        this.openFull = this.addRenderableWidget(new PillButton(PillButton.Kind.GLASS, Component.literal("Open settings"), "OPEN SETTINGS", true, this::openFullScreen));
-        this.openFull.place(0, 0, 1, this.s, this.g, Fonts.label(Math.max(10f, 12f * this.s)), Math.max(1.5f, 2.2f * this.s));
-        this.openFull.visible = false;
         this.filter();
         if (this.opening) {
             // A mod's settings switched straight back to this page while opening (BadOptimizations
@@ -165,14 +157,12 @@ public final class SettingsScreen extends Screen {
             } else {
                 this.select(this.tabs.stream().filter(m -> m.id.equals(remembered)).findFirst().orElse(this.tabs.isEmpty() ? null : this.tabs.get(0)));
             }
-        } else if (this.child == null && this.panel == null) {
-            // Back from the mod's own Done or Cancel: show its settings fresh.
+        } else if (this.panel == null) {
+            // Back from the mod's own screen (its Done or Cancel): show its page fresh.
             this.openChild();
         } else {
-            this.placeChild();
             this.placePanel();
         }
-        this.placeOpenFull();
     }
 
     private void filter() {
@@ -236,11 +226,9 @@ public final class SettingsScreen extends Screen {
         if (this.shelf == null) {
             this.closeChild();
             this.selected = null;
-            this.failed = false;
             remembered = SHELF;
             this.shelf = new ShelfPanel(this);
             this.placeShelf();
-            this.placeOpenFull();
         }
         return this.shelf;
     }
@@ -256,12 +244,10 @@ public final class SettingsScreen extends Screen {
         if (this.modrinth == null) {
             this.closeChild();
             this.selected = null;
-            this.failed = false;
             remembered = MODRINTH;
             this.setSearchFocused(false);
             this.modrinth = new ModrinthPanel();
             this.placeModrinth();
-            this.placeOpenFull();
             this.updateTextInput();
         }
     }
@@ -297,7 +283,7 @@ public final class SettingsScreen extends Screen {
     }
 
     private void select(ModEntry tab) {
-        if (tab == this.selected && (this.child != null || this.panel != null || this.opening)) {
+        if (tab == this.selected && (this.panel != null || this.opening)) {
             return;
         }
         this.closeChild();
@@ -307,102 +293,122 @@ public final class SettingsScreen extends Screen {
             this.openChild();
             this.revealSelected();
         }
-        this.placeOpenFull();
     }
 
+    /** The mod picked, by id, or null when it isn't listed. */
+    private ModEntry tab(String id) {
+        return this.tabs.stream().filter(tab -> tab.id.equals(id)).findFirst().orElse(null);
+    }
+
+    /**
+     * Builds the chosen mod's page: what it does, then its settings when the page can read them,
+     * or else a row saying where they are (its own screen, another mod's page) or that there's
+     * nothing to set up.
+     */
     private void openChild() {
-        this.failed = false;
-        this.child = null;
         this.panel = null;
-        this.childFocused = false;
         if (this.selected == null) {
             return;
         }
-        // Settings the page can read without opening the mod's screen (Sodium's and the pages
-        // mods add to it, and BadOptimizations' text file, whose screen opens Notepad).
-        String id = this.selected.id;
-        Set<String> otherTabs = this.tabs.stream().map(t -> t.id).filter(other -> !other.equals(id)).collect(Collectors.toSet());
-        SettingsModel model = Models.forMod(id, otherTabs, () -> this);
-        if (model != null) {
-            this.showPanel(model);
-            return;
+        ModEntry mod = this.selected;
+        SettingsModel settings = null;
+        List<Setting> instead = new ArrayList<>();
+        ModEntry home = mod.settingsIn == null ? null : this.tab(mod.settingsIn);
+        if (home != null) {
+            instead.add(new Setting.Action(home.title + "'s page", mod.title + "'s settings are on " + home.title + "'s page, with the rest of them.", null, "OPEN",
+                    () -> this.openTab(home.id)));
+        } else if (mod.isLibrary()) {
+            instead.add(new Setting.Note("Nothing to set up: other mods use it to run."));
+        } else {
+            settings = Models.forMod(mod.id, mod.others(this.tabs), () -> this, this::openFullScreen);
+            if (settings == null && mod.hasSettingsScreen() && !mod.opensElsewhere()) {
+                settings = this.readScreen(mod);
+            }
+            if (settings == null) {
+                instead.add(mod.hasSettingsScreen() ? this.ownScreenRow(mod) : new Setting.Note("Nothing to set up: it works on its own."));
+            }
         }
-        if (this.selected.opensElsewhere()) {
-            return;
+        this.showPanel(ModPage.of(mod.about, settings, instead));
+    }
+
+    /** A row with a button to a mod's own settings screen, for settings the page can't draw. */
+    private Setting ownScreenRow(ModEntry mod) {
+        if (mod.opensElsewhere()) {
+            return new Setting.Action("Its settings file", mod.title + " keeps its settings in a text file. Open it to change them; they take effect the next "
+                    + "time Minecraft starts.", null, "OPEN", this::openFullScreen);
         }
+        return new Setting.Action("Its own settings screen", mod.title + " keeps its settings on a screen of its own. When you close it, you're back here.",
+                null, "OPEN", this::openFullScreen);
+    }
+
+    /**
+     * Reads a mod's settings from its own settings screen, set up out of sight, when it's built
+     * with a library the page knows. A switch to another screen meanwhile (Reese's Sodium Options
+     * swaps its own in for Sodium's) is read instead, and doesn't take over the window.
+     */
+    private SettingsModel readScreen(ModEntry mod) {
         this.opening = true;
         this.reentered = false;
         this.replacement = null;
         adopting = this;
+        SettingsModel model = null;
         try {
-            Screen screen = this.selected.settings(this);
+            Screen screen = mod.settings(this);
             if (screen != null) {
-                model = Models.fromScreen(screen);
-                if (model != null) {
-                    // Built with YACL or Cloth Config: drawn by the page, like the rest.
-                    this.showPanel(model);
-                } else {
-                    this.child = new EmbeddedScreen(screen);
-                    this.placeChild();
-                }
-                // It switched to another screen while setting up: show that one here instead.
-                for (int hops = 0; hops < 3 && this.replacement != null && !this.reentered; hops++) {
-                    Screen next = this.replacement;
-                    this.replacement = null;
-                    EmbeddedScreen first = this.child;
-                    this.child = null;
-                    this.panel = null;
-                    if (first != null) {
-                        first.removed();
-                    }
-                    model = Models.fromScreen(next);
-                    if (model != null) {
-                        this.showPanel(model);
-                    } else {
-                        this.child = new EmbeddedScreen(next);
-                        this.placeChild();
-                    }
-                }
-            } else {
-                this.failed = true;
+                model = Models.fromScreen(screen, SettingsScreen::quietly);
             }
+            for (int hops = 0; hops < 3 && model == null && this.replacement != null && !this.reentered; hops++) {
+                Screen next = this.replacement;
+                this.replacement = null;
+                model = Models.fromScreen(next, SettingsScreen::quietly);
+            }
+        } catch (Throwable error) {
+            CubeUtilityClient.LOGGER.warn("{}'s settings couldn't be read", mod.id, error);
+            model = null;
         } finally {
             this.opening = false;
             adopting = null;
             this.replacement = null;
         }
         if (this.reentered) {
-            this.selected.markOpensElsewhere();
-            this.closeChild();
+            // It switched straight back to this page while opening (BadOptimizations opens a text file this way).
+            mod.markOpensElsewhere();
+            return null;
         }
+        return model;
     }
 
     /**
-     * Called for every screen change: while a mod's settings are opening inside this page, a
-     * switch to another screen (Reese's Sodium Options swaps its own in for Sodium's) is kept here
-     * to show inside the page, instead of taking over the window. Returns whether it was kept.
+     * Called for every screen change: while a mod's settings screen is being read, a switch to
+     * another screen is kept here to read instead of taking over the window, and while a mod's
+     * screen closes quietly every switch is held back. Returns whether it was held back.
      */
     public static boolean adopt(Screen screen) {
+        if (quiet > 0) {
+            return true;
+        }
         SettingsScreen page = adopting;
-        if (page == null || screen == page || screen == page.parent || screen instanceof SettingsScreen) {
+        if (page == null) {
+            return false;
+        }
+        if (screen == null) {
+            // Closing every screen while a mod's settings are only being read: held back.
+            return true;
+        }
+        if (screen == page || screen == page.parent || screen instanceof SettingsScreen) {
             return false;
         }
         page.replacement = screen;
         return true;
     }
 
-    private void placeChild() {
-        if (this.child == null) {
-            return;
-        }
-        int x = (int) Math.ceil(this.bodyX / this.g), y = (int) Math.ceil(this.bodyY / this.g);
-        int w = (int) Math.floor((this.bodyX + this.bodyW) / this.g) - x, h = (int) Math.floor((this.bodyY + this.bodyH) / this.g) - y;
+    /** Runs something that would change the screen (a mod's screen closing, to save) without it doing so. */
+    static void quietly(Runnable action) {
+        quiet++;
         try {
-            this.child.place(x, y, Math.max(40, w), Math.max(40, h));
-        } catch (Throwable error) {
-            CubeUtilityClient.LOGGER.warn("{}'s settings couldn't be shown here", this.selected.id, error);
-            this.child = null;
-            this.failed = true;
+            action.run();
+        } finally {
+            quiet--;
         }
     }
 
@@ -417,23 +423,7 @@ public final class SettingsScreen extends Screen {
         }
     }
 
-    /** The button under the message for settings that can't show inside the page. */
-    private void placeOpenFull() {
-        if (this.openFull == null) {
-            return;
-        }
-        boolean show = this.selected != null && this.child == null && this.panel == null && (this.failed || this.selected.opensElsewhere());
-        this.openFull.visible = show;
-        this.openFull.active = show;
-        if (show) {
-            float h = Math.round(Math.max(30f, 40f * this.s));
-            this.openFull.place(0, 0, h, this.s, this.g, Fonts.label(Math.max(10f, 12f * this.s)), Math.max(1.5f, 2.2f * this.s));
-            float x = Math.round(this.bodyX + (this.bodyW - (this.openFull.right())) / 2f);
-            this.openFull.place(x, Math.round(this.bodyY + this.bodyH * 0.38f + Math.max(40f, 58f * this.s)), h, this.s, this.g, Fonts.label(Math.max(10f, 12f * this.s)), Math.max(1.5f, 2.2f * this.s));
-        }
-    }
-
-    /** Opens the mod's settings the ordinary way, on the whole window; Done comes back here. */
+    /** Opens the mod's settings the ordinary way, on the whole window; closing them comes back here. */
     private void openFullScreen() {
         if (this.selected == null) {
             return;
@@ -444,7 +434,7 @@ public final class SettingsScreen extends Screen {
         }
     }
 
-    /** Lets the mod's settings save what they keep when closed, and lets go of them (or of Get more). */
+    /** Lets the mod's page save what it keeps, and lets go of it (or of Get more, or Browse Modrinth). */
     private void closeChild() {
         this.shelf = null;
         if (this.modrinth != null) {
@@ -456,16 +446,6 @@ public final class SettingsScreen extends Screen {
             this.panel = null;
             leaving.close();
             this.updateTextInput();
-        }
-        if (this.child != null) {
-            EmbeddedScreen leaving = this.child;
-            this.child = null;
-            Saving.saveIfEdited(leaving.screen);
-            try {
-                leaving.removed();
-            } catch (Throwable error) {
-                CubeUtilityClient.LOGGER.warn("Closing {}'s settings failed", this.selected == null ? "?" : this.selected.id, error);
-            }
         }
     }
 
@@ -480,31 +460,15 @@ public final class SettingsScreen extends Screen {
         this.minecraft.gui.setScreen(this.parent);
     }
 
-    @Override
-    public void tick() {
-        if (this.child != null) {
-            try {
-                this.child.tick();
-            } catch (Throwable error) {
-                this.dropChild(error);
-            }
-        }
-    }
-
-    /** The page's own drawing of a mod's settings failed: show the mod's own screen instead. */
+    /** The page's own drawing of a mod's settings failed: a button to the mod's own screen instead. */
     private void dropPanel(Throwable error) {
         CubeUtilityClient.LOGGER.warn("{}'s settings couldn't be drawn by the page", this.selected == null ? "?" : this.selected.id, error);
         this.panel = null;
         this.updateTextInput();
-        this.failed = true;
-        this.placeOpenFull();
-    }
-
-    private void dropChild(Throwable error) {
-        CubeUtilityClient.LOGGER.warn("{}'s settings stopped working inside the page", this.selected == null ? "?" : this.selected.id, error);
-        this.child = null;
-        this.failed = true;
-        this.placeOpenFull();
+        if (this.selected != null) {
+            List<Setting> instead = List.of(this.selected.hasSettingsScreen() ? this.ownScreenRow(this.selected) : new Setting.Note("Nothing to set up: it works on its own."));
+            this.showPanel(ModPage.of(this.selected.about, null, instead));
+        }
     }
 
     // ------------------------------------------------------------------ drawing
@@ -556,13 +520,6 @@ public final class SettingsScreen extends Screen {
             } catch (Throwable error) {
                 this.dropPanel(error);
             }
-        } else if (this.child != null) {
-            try {
-                this.child.extract(graphics, mouseX, mouseY, a);
-            } catch (Throwable error) {
-                // A mod's screen that can't draw inside the page mustn't take the game down.
-                this.dropChild(error);
-            }
         } else {
             this.extractMessage(paint, k);
         }
@@ -574,7 +531,12 @@ public final class SettingsScreen extends Screen {
         FontDescription brand = Fonts.strong(Math.max(9f, 11f * this.s));
         paint.text("CUBE UTILITY CLIENT", brand, x, Math.round(this.py + this.pad + Math.max(9f, 11f * this.s)), Rgb.alpha(GOLD, k), Math.max(1.5f, 2.2f * this.s));
         FontDescription title = Fonts.title(Math.max(32f, 38f * this.s));
-        paint.text("Settings", title, x, Math.round(this.searchY - Math.max(10f, 16f * this.s)), Rgb.alpha(TEXT, k), 0f);
+        float titleBase = Math.round(this.searchY - Math.max(10f, 16f * this.s));
+        paint.text("Mods", title, x, titleBase, Rgb.alpha(TEXT, k), 0f);
+        // How many are installed, next to the title (mods still asleep in Get more aren't counted).
+        FontDescription small = Fonts.label(Math.max(10f, 12f * this.s));
+        String count = this.tabs.size() + " installed";
+        paint.text(count, small, Math.round(this.px + this.sideW - this.pad - Paint.measure(count, small, 0f)), titleBase, Rgb.alpha(TEXT_3, k), 0f);
         this.extractSearch(paint, k);
 
         // The tabs, clipped to their area and scrolled.
@@ -629,11 +591,11 @@ public final class SettingsScreen extends Screen {
                 } else if (row.modrinth) {
                     this.extractModrinthIcon(paint, ix, iy, icon, k);
                     name = "Browse Modrinth";
-                    blurb = "Thousands more mods, ready next start.";
+                    blurb = "Add any mod from Modrinth.";
                 } else {
                     this.extractIcon(paint, row.tab, ix, iy, icon, k);
                     name = row.tab.title;
-                    blurb = row.tab.blurb;
+                    blurb = row.tab.line;
                 }
                 float nameSize = Fonts.size(nameFont), blurbSize = Fonts.size(blurbFont);
                 float gap = Math.max(4f, 5f * this.s);
@@ -736,7 +698,7 @@ public final class SettingsScreen extends Screen {
             this.extractShelfIcon(paint, x, y, icon, false, k);
             title = "Get more";
             blurb = "Popular mods that come with the client. Get one and it's on straight away.";
-            credit = "No download and no restart. Each mod you get has its own tab under Added mods.";
+            credit = "No download and no restart. Each mod you get joins the list, under Added mods.";
         } else if (this.modrinth != null) {
             this.extractModrinthIcon(paint, x, y, icon, k);
             title = "Browse Modrinth";
@@ -746,9 +708,9 @@ public final class SettingsScreen extends Screen {
             ModEntry tab = this.selected;
             this.extractIcon(paint, tab, x, y, icon, k);
             title = tab.title;
-            blurb = tab.blurb;
-            // The mod behind the tab, in small print.
-            credit = tab.modName + " " + tab.version;
+            blurb = tab.summary;
+            // Its version and who made it, in small print.
+            credit = tab.credit;
         } else {
             return;
         }
@@ -767,27 +729,11 @@ public final class SettingsScreen extends Screen {
         paint.solid().rect(this.contentX + 1f, line, this.px + this.pw - 1f, line + 1f, Rgb.alpha(0xFFFFFF, 0.06f * k));
     }
 
-    /** What the right side shows when a tab's settings can't show inside the page. */
+    /** What the right side shows with no mod picked. */
     private void extractMessage(Paint paint, float k) {
-        if (this.selected == null) {
-            String first = this.tabs.isEmpty() ? "No mods with settings are installed." : "Pick a tab on the left.";
-            FontDescription big = Fonts.label(Math.max(12f, 16f * this.s));
-            paint.text(first, big, Math.round(this.bodyX + (this.bodyW - Paint.measure(first, big, 0f)) / 2f), Math.round(this.bodyY + this.bodyH * 0.38f), Rgb.alpha(TEXT, k), 0f);
-            return;
-        }
-        String first, second;
-        if (this.selected.opensElsewhere()) {
-            first = this.selected.title + " keeps its settings in a text file.";
-            second = "Open it to change them; they take effect the next time Minecraft starts.";
-        } else {
-            first = "These settings couldn't open inside this page.";
-            second = "Open them on their own screen instead; Done brings you back here.";
-        }
+        String first = this.tabs.isEmpty() ? "No mods are installed." : "Pick a mod on the left.";
         FontDescription big = Fonts.label(Math.max(12f, 16f * this.s));
-        FontDescription small = Fonts.label(Math.max(10f, 13f * this.s));
-        float cx = this.bodyX + this.bodyW / 2f, cy = this.bodyY + this.bodyH * 0.38f;
-        paint.text(first, big, Math.round(cx - Paint.measure(first, big, 0f) / 2f), Math.round(cy), Rgb.alpha(TEXT, k), 0f);
-        paint.text(second, small, Math.round(cx - Paint.measure(second, small, 0f) / 2f), Math.round(cy + Fonts.size(small) + Math.max(10f, 14f * this.s)), Rgb.alpha(TEXT_2, k), 0f);
+        paint.text(first, big, Math.round(this.bodyX + (this.bodyW - Paint.measure(first, big, 0f)) / 2f), Math.round(this.bodyY + this.bodyH * 0.38f), Rgb.alpha(TEXT, k), 0f);
     }
 
     /** How far the page is through its quick fade-in. */
@@ -896,18 +842,15 @@ public final class SettingsScreen extends Screen {
         boolean onSearch = mx >= this.searchX && mx < this.searchX + this.searchW && my >= this.searchY && my < this.searchY + this.searchH;
         this.setSearchFocused(onSearch);
         if (onSearch) {
-            this.childFocused = false;
             return true;
         }
         if (this.shelf != null && this.shelf.contains(mx, my) && !this.close.isMouseOver(event.x(), event.y())) {
             this.setFocused(null);
-            this.childFocused = false;
             return this.shelf.mouseClicked(mx, my);
         }
         if (this.modrinth != null) {
             if (this.modrinth.contains(mx, my) && !this.close.isMouseOver(event.x(), event.y())) {
                 this.setFocused(null);
-                this.childFocused = false;
                 boolean used = this.modrinth.mouseClicked(mx, my);
                 this.updateTextInput();
                 return used;
@@ -930,17 +873,6 @@ public final class SettingsScreen extends Screen {
             this.panel.commitEdit();
             this.updateTextInput();
         }
-        if (this.child != null && this.child.contains(event.x(), event.y()) && !this.close.isMouseOver(event.x(), event.y())) {
-            this.setFocused(null);
-            this.childFocused = true;
-            try {
-                return this.child.mouseClicked(event, doubleClick);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
-        }
-        this.childFocused = false;
         Row row = this.rowAt(mx, my);
         if (row != null && row.header == null) {
             this.setFocused(null);
@@ -965,14 +897,6 @@ public final class SettingsScreen extends Screen {
         if (this.panel != null && this.panel.mouseReleased()) {
             return true;
         }
-        if (this.childFocused && this.child != null) {
-            try {
-                return this.child.mouseReleased(event);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
-        }
         return super.mouseReleased(event);
     }
 
@@ -980,14 +904,6 @@ public final class SettingsScreen extends Screen {
     public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         if (this.panel != null && this.panel.mouseDragged(event.x() * this.g)) {
             return true;
-        }
-        if (this.childFocused && this.child != null) {
-            try {
-                return this.child.mouseDragged(event, dx, dy);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
         }
         return super.mouseDragged(event, dx, dy);
     }
@@ -1008,27 +924,7 @@ public final class SettingsScreen extends Screen {
         if (this.panel != null && this.panel.contains(mx, mouseY * this.g)) {
             return this.panel.mouseScrolled(scrollY);
         }
-        if (this.child != null && this.child.contains(mouseX, mouseY)) {
-            try {
-                return this.child.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
-        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-    }
-
-    @Override
-    public void mouseMoved(double mouseX, double mouseY) {
-        if (this.child != null) {
-            try {
-                this.child.mouseMoved(mouseX, mouseY);
-            } catch (Throwable error) {
-                this.dropChild(error);
-            }
-        }
-        super.mouseMoved(mouseX, mouseY);
     }
 
     @Override
@@ -1070,31 +966,29 @@ public final class SettingsScreen extends Screen {
             }
         }
         if (key == InputConstants.KEY_UP || key == InputConstants.KEY_DOWN) {
-            if (!this.childFocused || this.searchFocused) {
-                // Get more and Browse Modrinth sit above the first tab.
-                List<Row> stops = this.rows.stream().filter(row -> row.header == null).toList();
-                boolean up = key == InputConstants.KEY_UP;
-                int at = -1;
-                for (int i = 0; i < stops.size(); i++) {
-                    Row row = stops.get(i);
-                    if (row.shelf ? this.shelf != null : row.modrinth ? this.modrinth != null : row.tab == this.selected) {
-                        at = i;
-                        break;
-                    }
+            // Get more and Browse Modrinth sit above the first mod.
+            List<Row> stops = this.rows.stream().filter(row -> row.header == null).toList();
+            boolean up = key == InputConstants.KEY_UP;
+            int at = -1;
+            for (int i = 0; i < stops.size(); i++) {
+                Row row = stops.get(i);
+                if (row.shelf ? this.shelf != null : row.modrinth ? this.modrinth != null : row.tab == this.selected) {
+                    at = i;
+                    break;
                 }
-                if (!stops.isEmpty()) {
-                    Row next = stops.get(at < 0 ? 0 : Math.max(0, Math.min(stops.size() - 1, at + (up ? -1 : 1))));
-                    if (next.shelf) {
-                        this.openShelf();
-                    } else if (next.modrinth) {
-                        this.openModrinth();
-                    } else {
-                        this.select(next.tab);
-                    }
-                    this.revealSelected();
-                }
-                return true;
             }
+            if (!stops.isEmpty()) {
+                Row next = stops.get(at < 0 ? 0 : Math.max(0, Math.min(stops.size() - 1, at + (up ? -1 : 1))));
+                if (next.shelf) {
+                    this.openShelf();
+                } else if (next.modrinth) {
+                    this.openModrinth();
+                } else {
+                    this.select(next.tab);
+                }
+                this.revealSelected();
+            }
+            return true;
         }
         if (this.searchFocused) {
             if (key == InputConstants.KEY_BACKSPACE && !this.query.isEmpty()) {
@@ -1106,28 +1000,7 @@ public final class SettingsScreen extends Screen {
             }
             return true;
         }
-        if (this.childFocused && this.child != null) {
-            try {
-                return this.child.keyPressed(event);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
-        }
         return super.keyPressed(event);
-    }
-
-    @Override
-    public boolean keyReleased(KeyEvent event) {
-        if (this.childFocused && this.child != null && !this.searchFocused) {
-            try {
-                return this.child.keyReleased(event);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
-        }
-        return super.keyReleased(event);
     }
 
     @Override
@@ -1143,14 +1016,6 @@ public final class SettingsScreen extends Screen {
                 this.setQuery(this.query + event.codepointAsString());
             }
             return true;
-        }
-        if (this.childFocused && this.child != null) {
-            try {
-                return this.child.charTyped(event);
-            } catch (Throwable error) {
-                this.dropChild(error);
-                return true;
-            }
         }
         return super.charTyped(event);
     }

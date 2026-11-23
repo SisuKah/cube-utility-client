@@ -28,4 +28,8 @@ public interface SettingsModel {
 
     /** False when some of the mod's settings couldn't be shown and only its own screen has them. */
     boolean complete();
+
+    /** The page moves on to another mod or closes: the last chance to save what the mod keeps. */
+    default void close() {
+    }
 }

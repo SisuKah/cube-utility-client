@@ -1,7 +1,6 @@
 package dev.cubeutilityclient.mixin;
 
 import dev.cubeutilityclient.render.Paint;
-import dev.cubeutilityclient.settings.EmbeddedScreen;
 import dev.cubeutilityclient.space.SpaceScene;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,10 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ScreenMixin {
     @Inject(method = "extractPanorama", at = @At("HEAD"), cancellable = true)
     private void cubeutilityclient$space(GuiGraphicsExtractor graphics, float a, CallbackInfo ci) {
-        // Inside the settings page, the page's own backdrop is already there.
-        if (!EmbeddedScreen.isDrawing()) {
-            SpaceScene.get().draw(new Paint(graphics), 0f, 0f);
-        }
+        SpaceScene.get().draw(new Paint(graphics), 0f, 0f);
         ci.cancel();
     }
 }

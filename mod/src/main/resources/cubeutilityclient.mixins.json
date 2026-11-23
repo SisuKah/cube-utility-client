@@ -7,8 +7,6 @@
     "AbstractButtonMixin",
     "AbstractSliderButtonMixin",
     "FontMixin",
-    "GuiGraphicsExtractorAccessor",
-    "GuiGraphicsExtractorMixin",
     "GuiMixin",
     "KeyBindsListMixin",
     "KeyMappingMixin",

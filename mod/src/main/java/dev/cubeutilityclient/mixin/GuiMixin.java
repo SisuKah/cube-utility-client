@@ -20,13 +20,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Gui.class)
 public abstract class GuiMixin {
     /**
-     * A mod's settings screen opening inside the settings page that switches to another screen
-     * (Reese's Sodium Options swaps its own in for Sodium's) is shown inside the page too, instead
-     * of taking over the window.
+     * While the Mods page reads a mod's settings from its screen, set up out of sight, a switch to
+     * another screen (Reese's Sodium Options swaps its own in for Sodium's) is read instead of
+     * taking over the window; and a mod's screen the page closes to save it doesn't go anywhere.
      */
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
     private void cubeutilityclient$keepInsidePage(Screen screen, CallbackInfo ci) {
-        if (screen != null && SettingsScreen.adopt(screen)) {
+        if (SettingsScreen.adopt(screen)) {
             ci.cancel();
         }
     }

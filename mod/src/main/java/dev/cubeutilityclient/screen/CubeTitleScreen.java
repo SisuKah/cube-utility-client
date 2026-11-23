@@ -26,8 +26,8 @@ import net.minecraft.resources.Identifier;
 
 /**
  * The client's title screen: CUBE UTILITY CLIENT over a turning galaxy, one gold button that
- * joins CubeCraft, Singleplayer and Multiplayer, and round buttons for Mods (the settings page for
- * every mod), Settings and Quit.
+ * joins CubeCraft, Singleplayer and Multiplayer, and round buttons for Mods (every installed mod,
+ * with its settings), Settings and Quit.
  *
  * It stays a {@link TitleScreen} so the game's own checks for "on the title screen" still hold,
  * but draws nothing of vanilla's: no panorama, logo, splash text or Realms notifications.
@@ -51,7 +51,7 @@ public final class CubeTitleScreen extends TitleScreen {
         this.singleplayer = this.addRenderableWidget(new PillButton(PillButton.Kind.GLASS, Component.translatable("menu.singleplayer"), null, false,
                 () -> this.minecraft.gui.setScreen(new SelectWorldScreen(this))));
         this.multiplayer = this.addRenderableWidget(new PillButton(PillButton.Kind.GLASS, Component.translatable("menu.multiplayer"), null, false, this::multiplayer));
-        this.mods = this.addRenderableWidget(new IconButton(LineIcon.MODS, Component.literal("Mods and settings"), () -> this.minecraft.gui.setScreen(new SettingsScreen(this))));
+        this.mods = this.addRenderableWidget(new IconButton(LineIcon.MODS, Component.literal("Mods"), () -> this.minecraft.gui.setScreen(new SettingsScreen(this))));
         this.settings = this.addRenderableWidget(new IconButton(LineIcon.SETTINGS, Component.translatable("menu.options"),
                 () -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
         this.quit = this.addRenderableWidget(new IconButton(LineIcon.QUIT, Component.translatable("menu.quit"), this.minecraft::stop));
