@@ -17,7 +17,7 @@ mods = [
   { id = "cubeutility",       name = "Cube Utility",        file = "jars/cube-utility-1.8.0+mc26.1-26.3.jar",   group = "own" },
   { id = "ewoptimizer",       name = "Eggwars Optimizer",   file = "jars/eggwars-optimizer-1.1.0.jar",          group = "own" },
   { id = "cubeutilityclient", name = "Cube Utility Client", file = "jars/cube-utility-client-1.1.0+mc26.3.jar", group = "own" },
-  { id = "spectatorinside",   name = "Spectator Inside",    file = "jars/spectator-inside-1.3.0.jar",           group = "own" },
+  { id = "spectatorinside",   name = "Spectator Inside",    file = "jars/spectator-inside-1.4.0.jar",           group = "own" },
   { id = "kbdelay",           name = "KB Delay Meter",      file = "jars/kb-delay-meter-0.1.0.jar",             group = "own" },
   { id = "packetlogger",      name = "Packet Logger",       file = "jars/packet-logger-2.0.0mc26.3.jar",        group = "own" },
   # Local-only (127.0.0.1) and token-protected; each PC makes its own token.

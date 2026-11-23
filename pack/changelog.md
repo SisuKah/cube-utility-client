@@ -3,6 +3,12 @@
 Patch notes, newest first. The newest section is what players see as "What's new" after the
 next release. `npm run pack:add` adds a section for you.
 
+## Spectator Inside 1.4.0
+
+- Inside another player in spectator mode you now see their hotbar where yours would be, pieced together from what you see them hold, with their off-hand item and the name of each item they switch to.
+- While you're inside someone, the number keys, middle click and scroll wheel no longer open the spectator menu. Once you leave, they work as usual.
+- Fixed their hands sometimes sitting in the bottom middle of the screen.
+
 ## Full frame rate, even when you're idle
 
 - Minecraft no longer drops to 10 frames a second when you leave it alone for five minutes: Dynamic FPS's Idle Timeout is now Disabled.
