@@ -84,6 +84,8 @@ export interface ModsView {
   installed: boolean
   own: ModCard[]
   extras: ExtraCard[]
+  /** Installed asleep; players switch them on inside Minecraft (Right Shift, Get more). */
+  inGame: ModCard[]
   always: string[]
   modrinth: ModrinthCard[]
   /** Jars the player added to the mods folder by hand. */

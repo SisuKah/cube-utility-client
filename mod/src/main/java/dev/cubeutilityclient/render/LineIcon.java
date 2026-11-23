@@ -70,6 +70,25 @@ public enum LineIcon {
             return Math.min(Math.abs(circle(x, y, 28, 28, 14)), segment(x, y, 38.5f, 38.5f, 50, 50));
         }
     },
+    /** On: a tick, for a mod that was got. */
+    CHECK {
+        @Override
+        float distance(float x, float y) {
+            return Math.min(segment(x, y, 16, 34, 27, 45), segment(x, y, 27, 45, 48, 21));
+        }
+    },
+    /** Get more: an outlined four-pointed sparkle, with a small ring beside it. */
+    SPARKLE {
+        @Override
+        float distance(float x, float y) {
+            float star = Float.MAX_VALUE;
+            for (int i = 0; i < 8; i++) {
+                int j = (i + 1) % 8;
+                star = Math.min(star, segment(x, y, SPARKLE_POINTS[i * 2], SPARKLE_POINTS[i * 2 + 1], SPARKLE_POINTS[j * 2], SPARKLE_POINTS[j * 2 + 1]));
+            }
+            return Math.min(star, Math.abs(circle(x, y, 50, 13, 4f)));
+        }
+    },
     /** Quit: the power symbol, a ring open at the top with a bar through the gap. */
     QUIT {
         @Override
@@ -91,6 +110,8 @@ public enum LineIcon {
     private static final float GAP_RIGHT_X = 32 + 20 * (float) Math.cos(Math.toRadians(52));
     private static final float GAP_LEFT_X = 32 + 20 * (float) Math.cos(Math.toRadians(128));
     private static final float GAP_Y = 33 - 20 * (float) Math.sin(Math.toRadians(52));
+    /** The big sparkle's outline: its four tips and the four inner corners between them. */
+    private static final float[] SPARKLE_POINTS = {27, 10, 32.5f, 29.5f, 50, 35, 32.5f, 40.5f, 27, 58, 21.5f, 40.5f, 4, 35, 21.5f, 29.5f};
 
     static {
         for (int i = 0; i < 6; i++) {

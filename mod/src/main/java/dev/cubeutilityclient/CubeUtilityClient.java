@@ -5,9 +5,12 @@ import com.mojang.logging.LogUtils;
 import dev.cubeutilityclient.compat.ModMenuCompat;
 import dev.cubeutilityclient.render.Pipelines;
 import dev.cubeutilityclient.settings.SettingsScreen;
+import dev.cubeutilityclient.shelf.Shelf;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -40,6 +43,10 @@ public final class CubeUtilityClient implements ClientModInitializer {
     public void onInitializeClient() {
         Pipelines.init();
         KeyMappingHelper.registerKeyMapping(SETTINGS_KEY);
+
+        // Get more: the mods players switch on in the game sleep until they're got.
+        ClientLifecycleEvents.CLIENT_STARTED.register(minecraft -> Shelf.start());
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, minecraft) -> Shelf.joined());
 
         // In a world with no menu open, the key works like any other.
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {

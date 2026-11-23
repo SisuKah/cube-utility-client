@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'motion/react'
-import { LoaderCircle, Trash2, TriangleAlert } from 'lucide-react'
+import { LoaderCircle, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
 import { ModIcon, ModrinthBrowser, monogram } from '../components/ModrinthBrowser'
 import { Switch } from '../components/Switch'
 import type { ModsState } from '../state/useMods'
@@ -165,6 +165,29 @@ export function Mods({ mods, modCount }: Props) {
                     {mods.error}
                   </p>
                 )}
+              </section>
+            )}
+
+            {view?.installed && view.inGame.length > 0 && (
+              <section>
+                <SectionLabel>GET MORE · IN THE GAME</SectionLabel>
+                <div className="rounded-[14px] border border-line bg-surface-1 p-4">
+                  <ul className="flex flex-wrap gap-2">
+                    {view.inGame.map((mod) => (
+                      <li
+                        key={mod.id}
+                        title={mod.description ?? undefined}
+                        className="inline-flex h-[30px] items-center rounded-lg border border-white/5 bg-surface-2 px-3 text-[13px] text-[#c9d3d2]"
+                      >
+                        {mod.name}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 flex items-start gap-2 text-[13px] text-text-3">
+                    <Sparkles aria-hidden="true" className="mt-px size-4 shrink-0 text-gold" strokeWidth={1.6} />
+                    <span>Already installed and waiting. In Minecraft, press Right Shift and open Get more to switch one on, with no restart.</span>
+                  </p>
+                </div>
               </section>
             )}
 

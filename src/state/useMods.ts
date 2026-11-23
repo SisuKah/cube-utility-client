@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { alwaysOn, defaultExtras, extraMods, ownMods } from '../data/pack'
+import { alwaysOn, defaultExtras, extraMods, inGameMods, ownMods } from '../data/pack'
 import { inApp, launcher, modrinth, type ModsView } from '../native'
 
 export interface ModsState {
@@ -81,6 +81,7 @@ function useDemoMods(): ModsState {
       enabled: Boolean(enabled[mod.id]),
       needs: mod.needs ?? []
     })),
+    inGame: inGameMods.map((mod) => ({ ...mod, updatedFrom: null })),
     always: alwaysOn,
     modrinth: [],
     playerJars: [],
@@ -91,8 +92,8 @@ function useDemoMods(): ModsState {
   return { view, toggle, error: '', remove: () => {}, removing: [], removeError: '' }
 }
 
-/** How many mods the view installs: own, always-on, the extras that are on and their libraries. */
+/** How many mods the view installs: own, in-game, always-on, the extras that are on and their libraries. */
 export function countMods(view: ModsView): number {
   const on = view.extras.filter((e) => e.enabled)
-  return view.own.length + view.always.length + on.length + new Set(on.flatMap((e) => e.needs)).size
+  return view.own.length + view.inGame.length + view.always.length + on.length + new Set(on.flatMap((e) => e.needs)).size
 }

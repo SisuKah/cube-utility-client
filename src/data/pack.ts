@@ -132,6 +132,16 @@ export const alwaysOn: string[] = [
   'Text Placeholder API'
 ]
 
+/** Get more: installed asleep, switched on inside Minecraft. */
+export const inGameMods: { id: string; name: string; version: string; description: string }[] = [
+  { id: 'keycps', name: 'KeyCps', version: '1.6.2', description: 'Shows the keys you press and your clicks per second.' },
+  { id: 'toggle-sprint-display', name: 'Toggle Sprint Display', version: '2.0.2', description: 'Shows when sprint or sneak is toggled on.' },
+  { id: 'status-effect-bars', name: 'Status Effect Bars', version: '1.0.12', description: 'A bar under each effect shows how long it has left.' },
+  { id: 'mousetweaks', name: 'Mouse Tweaks', version: '2.31', description: 'Drag and scroll to move items in menus faster.' },
+  { id: 'appleskin', name: 'AppleSkin', version: '3.0.10', description: 'How much hunger and saturation food gives back.' },
+  { id: 'betterf3', name: 'BetterF3', version: '20.0.0', description: 'A tidier, coloured F3 screen.' }
+]
+
 export type ExtrasState = Record<string, boolean>
 
 export function defaultExtras(): ExtrasState {

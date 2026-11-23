@@ -3,11 +3,14 @@ package dev.cubeutilityclient.settings;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.cubeutilityclient.CubeUtilityClient;
 import dev.cubeutilityclient.compat.ModMenuCompat;
+import dev.cubeutilityclient.shelf.Shelf;
+import dev.cubeutilityclient.shelf.ShelfMod;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -27,6 +30,8 @@ import net.minecraft.resources.Identifier;
  */
 final class ModEntry {
     enum Group {
+        /** Mods the player got from Get more, at the top, just under it. */
+        ADDED("ADDED MODS"),
         CUBECRAFT("CUBECRAFT"),
         VIDEO("VIDEO AND PERFORMANCE"),
         EXTRAS("WINDOW AND EXTRAS"),
@@ -67,6 +72,8 @@ final class ModEntry {
     private static final String SODIUM = "sodium";
 
     private static List<ModEntry> all;
+    /** Mods without a tab whose icon was asked for (Get more's cards), by id. */
+    private static final Map<String, ModEntry> OTHERS = new HashMap<>();
 
     final String id;
     final String title;
@@ -88,6 +95,11 @@ final class ModEntry {
         this.modName = meta.getName();
         this.version = meta.getVersion().getFriendlyString();
         Label label = LABELS.get(this.id);
+        // Mods from Get more are named in its list (assets/cubeutilityclient/shelf.json).
+        ShelfMod shelf = label == null ? Shelf.find(this.id) : null;
+        if (shelf != null) {
+            label = new Label(shelf.title, shelf.about, Group.ADDED);
+        }
         this.title = label != null ? label.title() : meta.getName();
         this.blurb = label != null ? label.blurb() : firstSentence(meta.getDescription());
         this.group = label != null ? label.group() : Group.OTHER;
@@ -165,6 +177,17 @@ final class ModEntry {
             CubeUtilityClient.LOGGER.warn("Couldn't open the settings of {}", this.id, error);
             return null;
         }
+    }
+
+    /** A mod's icon by its id, also for mods without a tab, or null. */
+    static Identifier iconOf(String id) {
+        for (ModEntry tab : all()) {
+            if (tab.id.equals(id)) {
+                return tab.icon();
+            }
+        }
+        ModEntry other = OTHERS.computeIfAbsent(id, key -> FabricLoader.getInstance().getModContainer(key).map(ModEntry::new).orElse(null));
+        return other == null ? null : other.icon();
     }
 
     /** The mod's icon as a texture, or null when it has none. Loaded the first time it's shown. */

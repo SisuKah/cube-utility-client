@@ -1,0 +1,77 @@
+{
+  "_comment": [
+    "Get more: mods players switch on in the game, with no restart. Each one ships in the pack (pack/pack.toml, group 'qol')",
+    "and loads with the game, asleep: the settings under 'switches' are off (a leading ! marks a 'disable' setting, true while",
+    "asleep) and keys whose names start with one of 'keys' are unbound. Getting the mod sets them back to how the player had",
+    "them. 'always' holds a setting at one value whatever the mod's state. A mod only belongs here if it checks these settings",
+    "itself before it draws anything, so an asleep mod costs no frame time. 'title' and 'about' name it on the settings page,",
+    "by what it does. The order here is the order on the page."
+  ],
+  "mods": [
+    {
+      "id": "keycps",
+      "title": "Keystrokes",
+      "about": "The keys you press and your clicks per second.",
+      "switches": ["com.keyshow.KeyShowConfig.get().enabled"],
+      "always": {"com.keyshow.KeyShowConfig.get().welcomeShown": true},
+      "keys": ["key.keycps."]
+    },
+    {
+      "id": "tnt_timer",
+      "builtIn": true,
+      "title": "TNT timer",
+      "about": "The seconds left above lit TNT, from green to red."
+    },
+    {
+      "id": "toggle-sprint-display",
+      "title": "Sprint status",
+      "about": "Shows when sprint or sneak is toggled on.",
+      "switches": [
+        "com.aeltumn.togglesprintdisplay.config.SprintConfig.get().showSprinting",
+        "com.aeltumn.togglesprintdisplay.config.SprintConfig.get().showSneaking",
+        "com.aeltumn.togglesprintdisplay.config.SprintConfig.get().showSwimming",
+        "com.aeltumn.togglesprintdisplay.config.SprintConfig.get().showDoll"
+      ]
+    },
+    {
+      "id": "status-effect-bars",
+      "title": "Effect timers",
+      "about": "A bar under each effect shows how long it has left.",
+      "switches": [
+        "io.github.a5b84.statuseffectbars.StatusEffectBars.config.hudLayout.enabled",
+        "io.github.a5b84.statuseffectbars.StatusEffectBars.config.inventoryLayout.enabled"
+      ]
+    },
+    {
+      "id": "mousetweaks",
+      "title": "Faster inventory",
+      "about": "Drag and scroll to move items in menus faster.",
+      "switches": [
+        "yalter.mousetweaks.Main.config.rmbTweak",
+        "yalter.mousetweaks.Main.config.lmbTweakWithItem",
+        "yalter.mousetweaks.Main.config.lmbTweakWithoutItem",
+        "yalter.mousetweaks.Main.config.wheelTweak"
+      ]
+    },
+    {
+      "id": "appleskin",
+      "title": "Food info",
+      "about": "How much hunger and saturation food gives back.",
+      "switches": [
+        "squeek.appleskin.ModConfig.INSTANCE.showFoodValuesInTooltip",
+        "squeek.appleskin.ModConfig.INSTANCE.showSaturationHudOverlay",
+        "squeek.appleskin.ModConfig.INSTANCE.showFoodValuesHudOverlay",
+        "squeek.appleskin.ModConfig.INSTANCE.showFoodValuesHudOverlayWhenOffhand",
+        "squeek.appleskin.ModConfig.INSTANCE.showFoodExhaustionHudUnderlay",
+        "squeek.appleskin.ModConfig.INSTANCE.showFoodHealthHudOverlay",
+        "squeek.appleskin.ModConfig.INSTANCE.showVanillaAnimationsOverlay"
+      ]
+    },
+    {
+      "id": "betterf3",
+      "title": "F3 screen",
+      "about": "A tidier, coloured F3 screen with the parts you choose.",
+      "switches": ["!me.cominixo.betterf3.config.GeneralOptions.disableMod"]
+    }
+  ]
+}

@@ -12,9 +12,13 @@ import dev.cubeutilityclient.screen.IconButton;
 import dev.cubeutilityclient.screen.PillButton;
 import dev.cubeutilityclient.settings.model.Models;
 import dev.cubeutilityclient.settings.model.SettingsModel;
+import dev.cubeutilityclient.shelf.Shelf;
+import dev.cubeutilityclient.shelf.ShelfMod;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -33,17 +37,31 @@ import net.minecraft.resources.Identifier;
  * their settings drawn by the page itself, all alike; the others show their own settings screen
  * inside the page. Either way every option works and saves as the mod intends. Mods with
  * nothing to change don't get a tab.
+ *
+ * <p>At the top of the list, Get more offers popular mods that come with the client asleep
+ * ({@link ShelfPanel}): one click switches a mod on, with no restart, and it gets a tab of its
+ * own under "Added mods".
  */
 public final class SettingsScreen extends Screen {
     private static final int TEXT = 0xE9EFEE, TEXT_2 = 0x9AABA9, TEXT_3 = 0x7E8F8D, GOLD = 0xE4C084, GOLD_DIM = 0xCDA76A, TEAL = 0x46C2B8;
     /** Settings screens are laid out at least this wide (GUI units) when the window allows. */
     private static final int CHILD_MIN_WIDTH = 316;
-    /** The tab last looked at, so the page opens where the player left it. */
+    /** Stands for Get more where a tab's id goes. */
+    private static final String SHELF = "get-more";
+    /** How long a tab that was just got glows in the list, in seconds. */
+    private static final float ARRIVAL = 1.6f;
+    private static final Identifier GLOW = SpaceTextures.texture("glow");
+    /** The tab last looked at (or Get more), so the page opens where the player left it. */
     private static String remembered = "cubeutility";
 
     private final Screen parent;
-    private final List<ModEntry> tabs = ModEntry.all();
+    /** The tabs, minus mods that are still asleep in Get more. */
+    private List<ModEntry> tabs = visibleTabs();
     private final List<Row> rows = new ArrayList<>();
+    /** Get more, while it shows on the right instead of a tab's settings. */
+    private ShelfPanel shelf;
+    /** When the tab of each mod just got appeared in the list, for a short glow. */
+    private final Map<String, Long> arrived = new HashMap<>();
     private final long opened = System.nanoTime();
     private long lastFrame = System.nanoTime();
     private ModEntry selected;
@@ -72,7 +90,8 @@ public final class SettingsScreen extends Screen {
     private float g, s, px, py, pw, ph, pad, sideW, listTop, listBottom, rowH, headerH, contentX, bodyX, bodyY, bodyW, bodyH;
     private float searchX, searchY, searchW, searchH;
 
-    private record Row(ModEntry tab, ModEntry.Group header) {
+    /** One line of the list: a tab, a group's heading, or Get more. */
+    private record Row(ModEntry tab, ModEntry.Group header, boolean shelf) {
     }
 
     public SettingsScreen(Screen parent) {
@@ -131,8 +150,14 @@ public final class SettingsScreen extends Screen {
             // A mod's settings switched straight back to this page while opening (BadOptimizations
             // opens a text file this way). Showing it again would only repeat that.
             this.reentered = true;
+        } else if (this.shelf != null) {
+            this.placeShelf();
         } else if (this.selected == null) {
-            this.select(this.tabs.stream().filter(m -> m.id.equals(remembered)).findFirst().orElse(this.tabs.isEmpty() ? null : this.tabs.get(0)));
+            if (SHELF.equals(remembered) && !Shelf.mods().isEmpty()) {
+                this.openShelf();
+            } else {
+                this.select(this.tabs.stream().filter(m -> m.id.equals(remembered)).findFirst().orElse(this.tabs.isEmpty() ? null : this.tabs.get(0)));
+            }
         } else if (this.child == null && this.panel == null) {
             // Back from the mod's own Done or Cancel: show its settings fresh.
             this.openChild();
@@ -146,13 +171,87 @@ public final class SettingsScreen extends Screen {
     private void filter() {
         String words = this.query.trim().toLowerCase(Locale.ROOT);
         this.rows.clear();
+        if (shelfMatches(words)) {
+            this.rows.add(new Row(null, null, true));
+        }
         for (ModEntry.Group group : ModEntry.Group.values()) {
             List<ModEntry> found = this.tabs.stream().filter(m -> m.group == group && m.matches(words)).toList();
             if (!found.isEmpty()) {
-                this.rows.add(new Row(null, group));
-                found.forEach(m -> this.rows.add(new Row(m, null)));
+                this.rows.add(new Row(null, group, false));
+                found.forEach(m -> this.rows.add(new Row(m, null, false)));
             }
         }
+    }
+
+    private static List<ModEntry> visibleTabs() {
+        return ModEntry.all().stream().filter(tab -> !Shelf.asleep(tab.id)).toList();
+    }
+
+    /** Get more shows in the list unless a search matches neither it nor a mod still to get. */
+    private static boolean shelfMatches(String words) {
+        if (Shelf.mods().isEmpty()) {
+            return false;
+        }
+        if (words.isEmpty()) {
+            return true;
+        }
+        StringBuilder text = new StringBuilder("get more mods add install new");
+        for (ShelfMod mod : Shelf.mods()) {
+            if (!Shelf.isOn(mod)) {
+                text.append(' ').append(mod.title).append(' ').append(mod.about).append(' ').append(mod.id);
+            }
+        }
+        String all = text.toString().toLowerCase(Locale.ROOT);
+        for (String word : words.split("\\s+")) {
+            if (!all.contains(word)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Shows Get more on the right. Returns it, so a test can press Get. */
+    ShelfPanel openShelf() {
+        if (this.shelf == null) {
+            this.closeChild();
+            this.selected = null;
+            this.failed = false;
+            remembered = SHELF;
+            this.shelf = new ShelfPanel(this);
+            this.placeShelf();
+            this.placeOpenFull();
+        }
+        return this.shelf;
+    }
+
+    private void placeShelf() {
+        if (this.shelf != null) {
+            this.shelf.place(this.bodyX, this.bodyY, this.bodyW, this.bodyH, this.s, this.g);
+        }
+    }
+
+    /** A mod was got or removed in Get more: its tab comes or goes. */
+    void shelfChanged(ShelfMod mod, boolean on) {
+        if (on) {
+            this.arrived.put(mod.id, System.nanoTime());
+        } else {
+            this.arrived.remove(mod.id);
+        }
+        this.tabs = visibleTabs();
+        this.filter();
+    }
+
+    boolean hasTab(String id) {
+        for (ModEntry tab : this.tabs) {
+            if (tab.id.equals(id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void openTab(String id) {
+        this.tabs.stream().filter(tab -> tab.id.equals(id)).findFirst().ifPresent(this::select);
     }
 
     private void select(ModEntry tab) {
@@ -303,8 +402,9 @@ public final class SettingsScreen extends Screen {
         }
     }
 
-    /** Lets the mod's settings save what they keep when closed, and lets go of them. */
+    /** Lets the mod's settings save what they keep when closed, and lets go of them (or of Get more). */
     private void closeChild() {
+        this.shelf = null;
         if (this.panel != null) {
             OptionsPanel leaving = this.panel;
             this.panel = null;
@@ -389,7 +489,14 @@ public final class SettingsScreen extends Screen {
         float mx = mouseX * this.g, my = mouseY * this.g;
         this.extractSidebar(graphics, paint, mx, my, k);
         this.extractHeader(paint, k);
-        if (this.panel != null) {
+        if (this.shelf != null) {
+            try {
+                this.shelf.extract(graphics, paint, mx, my, k);
+            } catch (Throwable error) {
+                CubeUtilityClient.LOGGER.warn("Get more couldn't be drawn", error);
+                this.shelf = null;
+            }
+        } else if (this.panel != null) {
             try {
                 this.panel.extract(graphics, paint, mx, my, k);
             } catch (Throwable error) {
@@ -419,7 +526,7 @@ public final class SettingsScreen extends Screen {
         // The tabs, clipped to their area and scrolled.
         float contentHeight = 0f;
         for (Row row : this.rows) {
-            contentHeight += row.tab == null ? this.headerH : this.rowH;
+            contentHeight += this.height(row);
         }
         float maxScroll = Math.max(0f, contentHeight - (this.listBottom - this.listTop));
         this.scrollGoal = Math.max(0f, Math.min(maxScroll, this.scrollGoal));
@@ -432,7 +539,7 @@ public final class SettingsScreen extends Screen {
         FontDescription blurbFont = Fonts.label(Math.max(9f, 11f * this.s));
         float rowLeft = this.px + this.pad * 0.55f, rowRight = this.contentX - this.pad * 0.55f;
         for (Row row : this.rows) {
-            if (row.tab == null) {
+            if (row.header != null) {
                 if (y + this.headerH > this.listTop && y < this.listBottom) {
                     paint.text(row.header.label, groupFont, this.px + this.pad, Math.round(y + this.headerH - Math.max(7f, 9f * this.s)), Rgb.alpha(GOLD_DIM, 0.85f * k), Math.max(1.2f, 1.8f * this.s));
                 }
@@ -440,22 +547,41 @@ public final class SettingsScreen extends Screen {
                 continue;
             }
             if (y + this.rowH > this.listTop && y < this.listBottom) {
-                boolean chosen = row.tab == this.selected;
+                boolean chosen = row.shelf ? this.shelf != null : row.tab == this.selected;
                 boolean hover = !chosen && mx >= rowLeft && mx < rowRight && my >= Math.max(y, this.listTop) && my < Math.min(y + this.rowH, this.listBottom);
                 if (chosen || hover) {
                     Paint.roundedRect(rowsBatch, rowLeft, y + 1f, rowRight - rowLeft, this.rowH - 2f, 11f * this.s, chosen ? 1f : 0f,
                             Rgb.alpha(0xFFFFFF, (chosen ? 0.07f : 0.035f) * k), Rgb.alpha(GOLD, 0.28f * k));
                 }
+                // A tab that just came from Get more glows gold for a moment.
+                Long at = row.tab == null ? null : this.arrived.get(row.tab.id);
+                float glow = at == null ? 0f : Math.max(0f, 1f - (System.nanoTime() - at) / (ARRIVAL * 1e9f));
+                if (glow > 0f) {
+                    Paint.roundedRect(rowsBatch, rowLeft, y + 1f, rowRight - rowLeft, this.rowH - 2f, 11f * this.s, 1f, Rgb.alpha(GOLD, 0.14f * glow * k), Rgb.alpha(GOLD, 0.6f * glow * k));
+                }
                 float icon = Math.round(Math.max(20f, 26f * this.s));
                 float ix = Math.round(this.px + this.pad), iy = Math.round(y + (this.rowH - icon) / 2f);
-                this.extractIcon(paint, row.tab, ix, iy, icon, k);
                 float textX = ix + icon + Math.round(Math.max(9f, 12f * this.s));
                 float maxW = rowRight - textX - 6f;
+                String name, blurb;
+                if (row.shelf) {
+                    int left = Shelf.available();
+                    this.extractShelfIcon(paint, ix, iy, icon, left > 0, k);
+                    name = "Get more";
+                    blurb = left > 0 ? "Popular mods, on in one click." : "Every mod here is on.";
+                    if (left > 0) {
+                        maxW -= this.extractBadge(paint, String.valueOf(left), rowRight - Math.round(this.pad * 0.45f), y + this.rowH / 2f, k);
+                    }
+                } else {
+                    this.extractIcon(paint, row.tab, ix, iy, icon, k);
+                    name = row.tab.title;
+                    blurb = row.tab.blurb;
+                }
                 float nameSize = Fonts.size(nameFont), blurbSize = Fonts.size(blurbFont);
                 float gap = Math.max(4f, 5f * this.s);
                 float top = y + (this.rowH - (nameSize + gap + blurbSize)) / 2f;
-                paint.text(fit(row.tab.title, nameFont, maxW), nameFont, textX, Math.round(top + nameSize * 0.8f), Rgb.alpha(chosen ? GOLD : TEXT, k), 0f);
-                paint.text(fit(row.tab.blurb, blurbFont, maxW), blurbFont, textX, Math.round(top + nameSize + gap + blurbSize * 0.8f), Rgb.alpha(TEXT_3, k), 0f);
+                paint.text(fit(name, nameFont, maxW), nameFont, textX, Math.round(top + nameSize * 0.8f), Rgb.alpha(chosen ? GOLD : TEXT, k), 0f);
+                paint.text(fit(blurb, blurbFont, maxW), blurbFont, textX, Math.round(top + nameSize + gap + blurbSize * 0.8f), Rgb.alpha(TEXT_3, k), 0f);
             }
             y += this.rowH;
         }
@@ -511,25 +637,59 @@ public final class SettingsScreen extends Screen {
         paint.text(letters, font, Math.round(x + (size - tw) / 2f), Math.round(y + size / 2f + Fonts.size(font) * 0.36f), Rgb.alpha(own ? GOLD : TEAL, k), 0f);
     }
 
-    private void extractHeader(Paint paint, float k) {
-        if (this.selected == null) {
-            return;
+    /** Get more's icon: a gold sparkle on a gold tile, glowing softly while there are mods to get. */
+    private void extractShelfIcon(Paint paint, float x, float y, float size, boolean twinkle, float k) {
+        if (twinkle) {
+            float t = (System.nanoTime() - this.opened) / 1e9f;
+            float breathe = 0.5f + 0.5f * (float) Math.sin(t * Math.PI * 2 / 2.4f);
+            float r = size * 0.95f;
+            paint.texture(GLOW, true).rect(x + size / 2f - r, y + size / 2f - r, x + size / 2f + r, y + size / 2f + r, Rgb.alpha(GOLD, (0.10f + 0.12f * breathe) * k));
         }
-        ModEntry tab = this.selected;
+        QuadBatch tile = paint.solid();
+        Paint.roundedRect(tile, x, y, size, size, size * 0.26f, 0f, Rgb.alpha(GOLD, 0.16f * k), 0);
+        float mark = Math.round(size * 0.66f);
+        Paint.icon(tile, LineIcon.SPARKLE, Math.round(x + (size - mark) / 2f), Math.round(y + (size - mark) / 2f), mark, Rgb.alpha(GOLD, k));
+    }
+
+    /** A small gold count, its right edge at {@code right}, centred on {@code cy}. Returns the room it takes. */
+    private float extractBadge(Paint paint, String text, float right, float cy, float k) {
+        FontDescription font = Fonts.strong(Math.max(9f, 10f * this.s));
+        float h = Math.round(Math.max(16f, 20f * this.s));
+        float w = Math.round(Math.max(h, Paint.measure(text, font, 0f) + h * 0.8f));
+        float x = right - w, y = Math.round(cy - h / 2f);
+        Paint.capsule(paint.solid(), x, y, w, h, 0f, (px, py) -> Rgb.alpha(GOLD, 0.9f * k), 0, false);
+        paint.text(text, font, Math.round(x + (w - Paint.measure(text, font, 0f)) / 2f), Math.round(y + h / 2f + Fonts.size(font) * 0.36f), Rgb.alpha(0x15100A, k), 0f);
+        return w + 6f;
+    }
+
+    private void extractHeader(Paint paint, float k) {
         float icon = Math.round(Math.max(36f, 56f * this.s));
         float x = Math.round(this.contentX + this.pad), y = Math.round(this.py + this.pad);
-        this.extractIcon(paint, tab, x, y, icon, k);
+        String title, blurb, credit;
+        if (this.shelf != null) {
+            this.extractShelfIcon(paint, x, y, icon, false, k);
+            title = "Get more";
+            blurb = "Popular mods that come with the client. Get one and it's on straight away.";
+            credit = "No download and no restart. Each mod you get has its own tab under Added mods.";
+        } else if (this.selected != null) {
+            ModEntry tab = this.selected;
+            this.extractIcon(paint, tab, x, y, icon, k);
+            title = tab.title;
+            blurb = tab.blurb;
+            // The mod behind the tab, in small print.
+            credit = tab.modName + " " + tab.version;
+        } else {
+            return;
+        }
         float textX = x + icon + Math.round(Math.max(12f, 18f * this.s));
         float textW = this.close.getX() * this.g - textX - this.pad;
         FontDescription name = Fonts.label(Math.max(14f, 24f * this.s));
         FontDescription body = Fonts.label(Math.max(10f, 13f * this.s));
         FontDescription small = Fonts.label(Math.max(9f, 11f * this.s));
         float nameBase = Math.round(y + Fonts.size(name) * 0.95f);
-        paint.text(fit(tab.title, name, textW), name, textX, nameBase, Rgb.alpha(TEXT, k), 0f);
+        paint.text(fit(title, name, textW), name, textX, nameBase, Rgb.alpha(TEXT, k), 0f);
         float blurbBase = Math.round(nameBase + Fonts.size(body) + Math.max(6f, 8f * this.s));
-        paint.text(fit(tab.blurb, body, textW), body, textX, blurbBase, Rgb.alpha(TEXT_2, k), 0f);
-        // The mod behind the tab, in small print.
-        String credit = tab.modName + " " + tab.version;
+        paint.text(fit(blurb, body, textW), body, textX, blurbBase, Rgb.alpha(TEXT_2, k), 0f);
         paint.text(fit(credit, small, textW), small, textX, Math.round(blurbBase + Fonts.size(small) + Math.max(5f, 7f * this.s)), Rgb.alpha(TEXT_3, 0.8f * k), 0f);
         // The line between the tab's name and its settings.
         float line = this.bodyY - Math.round(Math.max(8f, 11f * this.s));
@@ -621,15 +781,19 @@ public final class SettingsScreen extends Screen {
         this.filter();
     }
 
-    private ModEntry rowAt(double mx, double my) {
+    private float height(Row row) {
+        return row.header != null ? this.headerH : this.rowH;
+    }
+
+    private Row rowAt(double mx, double my) {
         if (mx < this.px || mx >= this.contentX || my < this.listTop || my >= this.listBottom) {
             return null;
         }
         float y = this.listTop - this.scroll;
         for (Row row : this.rows) {
-            float h = row.tab == null ? this.headerH : this.rowH;
+            float h = this.height(row);
             if (my >= y && my < y + h) {
-                return row.tab;
+                return row;
             }
             y += h;
         }
@@ -639,7 +803,7 @@ public final class SettingsScreen extends Screen {
     private void revealSelected() {
         float y = 0f;
         for (Row row : this.rows) {
-            if (row.tab == this.selected) {
+            if (row.header == null && (row.shelf ? this.shelf != null : row.tab == this.selected)) {
                 float view = this.listBottom - this.listTop;
                 if (y < this.scrollGoal) {
                     this.scrollGoal = Math.max(0f, y - this.headerH);
@@ -648,7 +812,7 @@ public final class SettingsScreen extends Screen {
                 }
                 return;
             }
-            y += row.tab == null ? this.headerH : this.rowH;
+            y += this.height(row);
         }
     }
 
@@ -660,6 +824,11 @@ public final class SettingsScreen extends Screen {
         if (onSearch) {
             this.childFocused = false;
             return true;
+        }
+        if (this.shelf != null && this.shelf.contains(mx, my) && !this.close.isMouseOver(event.x(), event.y())) {
+            this.setFocused(null);
+            this.childFocused = false;
+            return this.shelf.mouseClicked(mx, my);
         }
         if (this.panel != null) {
             if (this.panel.contains(mx, my) && !this.close.isMouseOver(event.x(), event.y())) {
@@ -687,10 +856,14 @@ public final class SettingsScreen extends Screen {
             }
         }
         this.childFocused = false;
-        ModEntry row = this.rowAt(mx, my);
-        if (row != null) {
+        Row row = this.rowAt(mx, my);
+        if (row != null && row.header == null) {
             this.setFocused(null);
-            this.select(row);
+            if (row.shelf) {
+                this.openShelf();
+            } else {
+                this.select(row.tab);
+            }
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -734,6 +907,9 @@ public final class SettingsScreen extends Screen {
         if (mx >= this.px && mx < this.contentX) {
             this.scrollGoal -= (float) scrollY * this.rowH * 1.4f;
             return true;
+        }
+        if (this.shelf != null && this.shelf.contains(mx, mouseY * this.g)) {
+            return this.shelf.mouseScrolled(scrollY);
         }
         if (this.panel != null && this.panel.contains(mx, mouseY * this.g)) {
             return this.panel.mouseScrolled(scrollY);
@@ -796,9 +972,14 @@ public final class SettingsScreen extends Screen {
         if (key == InputConstants.KEY_UP || key == InputConstants.KEY_DOWN) {
             if (!this.childFocused || this.searchFocused) {
                 List<ModEntry> shown = this.rows.stream().map(Row::tab).filter(t -> t != null).toList();
-                if (!shown.isEmpty()) {
-                    int at = shown.indexOf(this.selected);
-                    int next = at < 0 ? 0 : Math.max(0, Math.min(shown.size() - 1, at + (key == InputConstants.KEY_UP ? -1 : 1)));
+                boolean up = key == InputConstants.KEY_UP;
+                int at = this.shelf != null ? -1 : shown.indexOf(this.selected);
+                if (up && at <= 0 && this.rows.stream().anyMatch(Row::shelf)) {
+                    // Get more sits above the first tab.
+                    this.openShelf();
+                    this.revealSelected();
+                } else if (!shown.isEmpty()) {
+                    int next = at < 0 ? 0 : Math.max(0, Math.min(shown.size() - 1, at + (up ? -1 : 1)));
                     this.select(shown.get(next));
                 }
                 return true;

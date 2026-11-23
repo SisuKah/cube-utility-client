@@ -17,6 +17,9 @@ pub struct ModsView {
     pub own: Vec<ModCard>,
     /// "Extras · you choose": the mods players switch on or off.
     pub extras: Vec<ExtraCard>,
+    /// "Get more · in the game": quality-of-life mods the pack always installs, asleep, which
+    /// players switch on inside Minecraft (Right Shift, Get more) with no restart.
+    pub in_game: Vec<ModCard>,
     /// "Performance and libraries": always installed.
     pub always: Vec<String>,
     /// Mods the player installed from Modrinth, and the libraries that came with them.
@@ -107,6 +110,14 @@ pub fn build(
                 enabled: choices.get(&file.id).copied().unwrap_or(file.default_enabled),
                 needs,
             });
+        } else if file.required && file.group == Group::Qol {
+            view.in_game.push(ModCard {
+                id: file.id.clone(),
+                name: file.name.clone(),
+                version,
+                description: file.description.clone(),
+                updated_from: updated_from.get(&file.id).map(|old| display_version(old)),
+            });
         } else if file.required {
             view.always.push(file.name.clone());
         }
@@ -184,6 +195,7 @@ mod tests {
                 file("zoomify", Group::Qol, false, true, &[], "2.17.0+mc26.3"),
                 file("freelook", Group::Qol, false, false, &[], "1.4.4"),
                 file("yacl", Group::Library, false, false, &["zoomify"], "3.9.7+26.3-fabric"),
+                file("fpsdisplay", Group::Qol, true, true, &[], "5.2.0+26.3"),
             ],
             configs: vec![],
         }
@@ -201,6 +213,8 @@ mod tests {
         let extras: Vec<(&str, bool, &[String])> = view.extras.iter().map(|e| (e.id.as_str(), e.enabled, e.needs.as_slice())).collect();
         assert_eq!(extras, [("zoomify", true, &["YACL".to_string()][..]), ("freelook", true, &[][..])]);
         assert_eq!(view.always, ["SODIUM", "FABRIC-API"], "performance first, then libraries; tied libraries listed under their mod");
+        let in_game: Vec<(&str, &str)> = view.in_game.iter().map(|m| (m.id.as_str(), m.version.as_str())).collect();
+        assert_eq!(in_game, [("fpsdisplay", "5.2.0")], "required quality-of-life mods are switched on in the game");
         assert_eq!(view.player_jars, ["mods/mine.jar"]);
         assert!(!build(None, &choices, &updated, vec![], vec![], &[]).installed);
     }

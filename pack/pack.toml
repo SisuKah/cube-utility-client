@@ -16,7 +16,7 @@ mods = [
   # More Chat History and Armor Dura HUD left the pack with it.
   { id = "cubeutility",       name = "Cube Utility",        file = "jars/cube-utility-1.8.0+mc26.1-26.3.jar",   group = "own" },
   { id = "ewoptimizer",       name = "Eggwars Optimizer",   file = "jars/eggwars-optimizer-1.1.0.jar",          group = "own" },
-  { id = "cubeutilityclient", name = "Cube Utility Client", file = "jars/cube-utility-client-1.0.0+mc26.3.jar", group = "own" },
+  { id = "cubeutilityclient", name = "Cube Utility Client", file = "jars/cube-utility-client-1.1.0+mc26.3.jar", group = "own" },
   { id = "spectatorinside",   name = "Spectator Inside",    file = "jars/spectator-inside-1.3.0.jar",           group = "own" },
   { id = "kbdelay",           name = "KB Delay Meter",      file = "jars/kb-delay-meter-0.1.0.jar",             group = "own" },
   { id = "packetlogger",      name = "Packet Logger",       file = "jars/packet-logger-2.0.0mc26.3.jar",        group = "own" },
@@ -51,6 +51,17 @@ mods = [
   # Lets servers adjust the client (made for MCC Island); in my own game too.
   { modrinth = "noxesium",        version = "3.3.0",             group = "library" },
   { modrinth = "server-resource-pack-checker", version = "fabric-1.2.2+26.3", group = "library" },
+
+  # Get more: popular mods every player has, asleep until they switch one on inside Minecraft
+  # (Right Shift, Get more), with no restart. Quality of life that isn't optional means this;
+  # the launcher lists them under "Get more · in the game". How each one sleeps is in
+  # mod/src/main/resources/assets/cubeutilityclient/shelf.json, so a new one goes there too.
+  { modrinth = "keycps",               version = "1.6.2+26.3",       group = "qol" },
+  { modrinth = "toggle-sprint-display", version = "2.0.2",            group = "qol" },
+  { modrinth = "status-effect-bars",    version = "1.0.12",           group = "qol" },
+  { modrinth = "mouse-tweaks",          version = "26.3-2.31-fabric", group = "qol" },
+  { modrinth = "appleskin",             version = "3.0.10+mc26.3",    group = "qol" },
+  { modrinth = "betterf3",              version = "20.0.0",           group = "qol" },
 
   # Optional quality of life (players can switch these on or off)
   { modrinth = "cubes-without-borders", version = "5.0.0+26.3", group = "qol", optional = true, default = "on" },

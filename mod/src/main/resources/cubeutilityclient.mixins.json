@@ -10,8 +10,11 @@
     "GuiGraphicsExtractorAccessor",
     "GuiGraphicsExtractorMixin",
     "GuiMixin",
+    "KeyBindsListMixin",
+    "KeyMappingMixin",
     "MinecraftMixin",
     "ScreenMixin",
+    "TntRendererMixin",
     "WindowMixin"
   ],
   "injectors": {
