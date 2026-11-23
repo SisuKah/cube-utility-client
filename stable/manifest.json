@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "serial": 4,
-  "packVersion": "2026.11.23-2",
+  "serial": 5,
+  "packVersion": "2026.11.23-3",
   "channel": "stable",
-  "releasedAt": "2026-11-23T13:06:47Z",
+  "releasedAt": "2026-11-23T13:55:35Z",
   "minLauncherVersion": "1.0.0",
   "minecraft": "26.3",
   "loader": {
@@ -17,8 +17,8 @@
   "quickPlay": "play.cubecraft.net",
   "allowExtraMods": true,
   "notes": {
-    "title": "Full frame rate, even when you're idle",
-    "markdown": "- Minecraft no longer drops to 10 frames a second when you leave it alone for five minutes: Dynamic FPS's Idle Timeout is now Disabled.\n- It keeps its full frame rate behind other windows too, and Minecraft's own Inactivity FPS Limit is on Minimized, so it never slows down while you're away from the keyboard."
+    "title": "Spectator Inside 1.4.0",
+    "markdown": "- Inside another player in spectator mode you now see their hotbar where yours would be, pieced together from what you see them hold, with their off-hand item and the name of each item they switch to.\n- While you're inside someone, the number keys, middle click and scroll wheel no longer open the spectator menu. Once you leave, they work as usual.\n- Fixed their hands sometimes sitting in the bottom middle of the screen."
   },
   "files": [
     {
@@ -28,7 +28,7 @@
       "description": "An all-in-one, client-side toolkit for CubeCraft: game timer, map and team layout, build limit, bridge lengths, spawn protection, item cooldowns, durability and drop protection, EggWars coach, clutch cues, supply HUD, shop discount, map briefing, AFK alarm, alt marker, hidden chest finder, party tools, auto GG, auto play and auto kit (your kit per map), chat alerts, stats, leaderboards, Discord presence, automatic clips through OBS and voting; plus zoom, freelook, fullbright, an armour HUD, ping numbers and more chat history for any server. Every feature can be switched on and off on its own.",
       "group": "own",
       "path": "mods/cube-utility-1.8.0+mc26.1-26.3.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/cube-utility-1.8.0-mc26.1-26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/cube-utility-1.8.0-mc26.1-26.3.jar",
       "sha512": "852b2b406b9589a6e7fbc002ca16c58bdeaf6d1ec2fb9145cdb82c494bbb0d494eebcee4740a747c5d6ad011da2c49e32f17b0a92271f9f0b9409d151ee31f45",
       "size": 906970,
       "required": true,
@@ -41,7 +41,7 @@
       "description": "Client-side tweaks for CubeCraft Eggwars: forced generator particles follow your Particles setting, dropped item stacks draw one model, duplicate chat lines stack, and shop/rank spam is cleaned up.",
       "group": "own",
       "path": "mods/eggwars-optimizer-1.1.0.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/eggwars-optimizer-1.1.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/eggwars-optimizer-1.1.0.jar",
       "sha512": "007dcbc909557adeaa750cbbb447151e4dfc9fb27184c94f956f9c57622cf6e97388ba2b0e98e75bdb5c416b7a548ba07589d4e7223ca2f1704e01ef91c0f951",
       "size": 50015,
       "required": true,
@@ -54,7 +54,7 @@
       "description": "The Cube Utility Client look: a space title screen, restyled menus, a dark window, and one settings page for every mod (Right Shift).",
       "group": "own",
       "path": "mods/cube-utility-client-1.1.0+mc26.3.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/cube-utility-client-1.1.0-mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/cube-utility-client-1.1.0-mc26.3.jar",
       "sha512": "bef928b49cf55225156a64b7beaa396a047fd49b49e21cedb1423e33335a25debac69ae3e1b3b954376124f05e43bf622dac7d7044573608cb7709fd650bc9d0",
       "size": 490348,
       "required": true,
@@ -63,13 +63,13 @@
     {
       "id": "spectatorinside",
       "name": "Spectator Inside",
-      "version": "1.3.0",
-      "description": "In spectator mode, left-click any player or mob (even from far away) to go inside their head, or hop between players with the arrow keys. See their hands, health, keystrokes, combos, reach, opponent and kills on a HUD you can rearrange (press J). Works client-side; your body is teleported after them with the spectator menu's teleport, so they never drop out of view and you hear what they hear. Press Sneak to leave.",
+      "version": "1.4.0",
+      "description": "In spectator mode, left-click any player or mob (even from far away) to go inside their head, or hop between players with the arrow keys. See their hands and their hotbar, pieced together from what they hold, plus their health, keystrokes, combos, reach, opponent and kills on a HUD you can rearrange (press J). Works client-side; your body is teleported after them with the spectator menu's teleport, so they never drop out of view and you hear what they hear. Press Sneak to leave.",
       "group": "own",
-      "path": "mods/spectator-inside-1.3.0.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/spectator-inside-1.3.0.jar",
-      "sha512": "b72d6a9f86a19952e7ed7de5781185ce35f1d547442efd4ddaa6f7fc0e09578fb314294e2132624899ecc4088f7bd8b91b06119f61f4004ea8f198f784be4784",
-      "size": 93840,
+      "path": "mods/spectator-inside-1.4.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/spectator-inside-1.4.0.jar",
+      "sha512": "8d532205869ff318ab903a847c218b209d7876641adf4d0ddbd8f775215a0b87281724389f47ea8ea8c16bc90bde6328f7e117f715da9bd8d41296f62b4d4cbd",
+      "size": 106521,
       "required": true,
       "defaultEnabled": true
     },
@@ -80,7 +80,7 @@
       "description": "Shows how long each opponent's knockback takes to show up after a hit: a live read on their real round trip. Read-only: it only looks at packets your client already receives and changes nothing you send.",
       "group": "own",
       "path": "mods/kb-delay-meter-0.1.0.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/kb-delay-meter-0.1.0.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/kb-delay-meter-0.1.0.jar",
       "sha512": "a58eb71e4e16c0c81468fba3c9926a362c4dd0ea4fd9e9b89bb6add51cc45e614a353e24875dac14a8feafda56734ffa9745a75c0498ff1b06b8bf2886f1d02d",
       "size": 21838,
       "required": true,
@@ -93,7 +93,7 @@
       "description": "Logs the network packets you choose to chat or to size-limited log files. Press F6 for the packet picker, or use /packetlogger.",
       "group": "own",
       "path": "mods/packet-logger-2.0.0mc26.3.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/packet-logger-2.0.0mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/packet-logger-2.0.0mc26.3.jar",
       "sha512": "3d1d1b71508fd6098227adf610d925c37b273202750022f76b14e45811d9dc3821d5c5babe87b81677057bddbccd9e18a6d7940941f5d81c9af842784f0dc90c",
       "size": 99677,
       "required": true,
@@ -106,7 +106,7 @@
       "description": "A local-only link between this game and your AI assistant on the same PC: live performance stats, video-setting control and timed A/B experiments. Listens on 127.0.0.1 only, needs a secret token, never sends anything to the server and never touches your controls.",
       "group": "own",
       "path": "mods/assistant-bridge-0.3.1+mc26.3.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/assistant-bridge-0.3.1-mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/assistant-bridge-0.3.1-mc26.3.jar",
       "sha512": "f48d40b24349344f0220ee07edc920629ad7bf4be4d7dccbe65069cccbd99dbb36e1379055d5a7fd50209333e99024e4728ca33becf57d929db5f7ec2933cb6e",
       "size": 96472,
       "required": true,
@@ -119,7 +119,7 @@
       "description": "Performance only: remembers the bidi layout (ClientLanguage.getVisualOrder) of text the game drew before, so HUD strings, the scoreboard and the tab list don't run the ICU bidi analysis again every frame. Changes nothing on screen. /textcache shows the hit rate.",
       "group": "performance",
       "path": "mods/text-layout-cache-1.0.0+mc26.3.jar",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/text-layout-cache-1.0.0-mc26.3.jar",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/text-layout-cache-1.0.0-mc26.3.jar",
       "sha512": "3b154d2282712e88172215c8c5dd21c11f600ed527a1877d507c172ca4f8acbb2685e94f8ab01e0dedf6577e6cd51b2459fff6532116837fc3c2ad5dba0829d6",
       "size": 8839,
       "required": true,
@@ -622,126 +622,126 @@
   "configs": [
     {
       "path": "config/cubeutilityclient/default-options.txt",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-cubeutilityclient-default-options.txt",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-cubeutilityclient-default-options.txt",
       "sha512": "f83e65189bfb0cb1a98636dbe3ac27e4ca09c81e866f43cc0c407033e6282592cbadc126c583553f26ed61a92f166ad050afcceb0b6cc2ca53cb5a3e60bf4cb1",
       "size": 6510,
       "policy": "always"
     },
     {
       "path": "config/cubeutility/config.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-cubeutility-config.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-cubeutility-config.json",
       "sha512": "24bc79f2b52eb359101d697f8134d8966385513fd5c31a9c5ecd3ab3bf87df5f467d59f62e3139974d7f525c8a2336b7cefa12113bada7ef18d1932930421809",
       "size": 9974,
       "policy": "if-missing"
     },
     {
       "path": "config/cubeutility/bridges.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-cubeutility-bridges.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-cubeutility-bridges.json",
       "sha512": "a9569f521ff1ad20b5fb3060ad0230c62a423843c94e63cb1ec467b3db344dac495a9ccee5820cb4d522eda8d3eae196cd404c4157c4bb0e3956123478f5ca23",
       "size": 2935,
       "policy": "if-missing"
     },
     {
       "path": "config/cubeutility/build_limits.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-cubeutility-build_limits.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-cubeutility-build_limits.json",
       "sha512": "94cd052e58658dd9cb52fbb7f20d749a4e4c20ef506bda59e023c8cb0ae9db26951b1195e70cc680ecacf124a8ccb1759da819360dbb70592814f5203ce49b66",
       "size": 47,
       "policy": "if-missing"
     },
     {
       "path": "config/sodium-options.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-sodium-options.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-sodium-options.json",
       "sha512": "698e3f2bff08ced9640d748d3cf1d1d4725f1a3f176be20f64ea774a09c7086287f74d0a1eec17890551bd5ad31cecaf4514f9db469cf2f19d5b0fee9e80010a",
       "size": 744,
       "policy": "if-missing"
     },
     {
       "path": "config/sodium-extra-options.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-sodium-extra-options.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-sodium-extra-options.json",
       "sha512": "856fdf2e52f2dc7f1a7824bb11cfa82dab86da082413eb2553d347cb2708c5c3a56fb223fb64dbb754d1f63acaa746f046056ccea7a88105a085cd7eece58a12",
       "size": 6390,
       "policy": "if-missing"
     },
     {
       "path": "config/entityculling.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-entityculling.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-entityculling.json",
       "sha512": "88ef464cb3681773dc18fe7c4fbcb7ec49f86190e462aeea2fb5a7ef01c0d151d4860a167825234a3829cce658c3bb777d46940307c4095e46b2ad51df1c8ef6",
       "size": 2248,
       "policy": "if-missing"
     },
     {
       "path": "config/immediatelyfast.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-immediatelyfast.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-immediatelyfast.json",
       "sha512": "471705327bf694ffae4a9c86011192ab76b12a20a97bbe6e021e0d6207aebee2ec311e095fd965f2b09734d6a7e4b682901a52b2802a08d56a07a4d1a14b8af8",
       "size": 951,
       "policy": "if-missing"
     },
     {
       "path": "config/moreculling.toml",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-moreculling.toml",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-moreculling.toml",
       "sha512": "8ee9ef0ea045c14547e8ccc22ad6f9d32c7d187edbabe279071e02103aa75e9e3d336c29ca68ced961100d6ff8937188b433a47fd2b104d06f4702f5580a30c3",
       "size": 495,
       "policy": "if-missing"
     },
     {
       "path": "config/dynamic_fps.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-dynamic_fps.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-dynamic_fps.json",
       "sha512": "02249694683bd4ce1959d8e61a333c9ed93ec8fa10ee643cb34bb1f7c5970db554c1ffda39a94189df1e5d8612a132b9f07993f51efe55ef120018a1d270c011",
       "size": 205,
       "policy": "if-missing"
     },
     {
       "path": "config/cwb.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-cwb.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-cwb.json",
       "sha512": "dc06b1813e1648e7cb0574875c2585bc60ede2b08c544138ab200d4df54edc6f9ad18540171b14b93806d8256de5a8334aa23a5fed467736b91f1adff7d285d4",
       "size": 359,
       "policy": "if-missing"
     },
     {
       "path": "config/badoptimizations.txt",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-badoptimizations.txt",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-badoptimizations.txt",
       "sha512": "32eb792cbbae2a58fd510354a514a4cf7243d2dc0dca87eb67e0d41731d056b3289db8460505802ad2d89ad6167d65bf350a5459c0e57602fa7992334ac40618",
       "size": 3540,
       "policy": "if-missing"
     },
     {
       "path": "config/ewoptimizer.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-ewoptimizer.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-ewoptimizer.json",
       "sha512": "07c6f70fbbeb2c54d2c3dbe4571bdeddb6ca262dd9845788f4875e3b05a226feb8fc0ec531a8e2ca8b2a824a15f3ec7194f02005b388e3317d45b4f2790f8922",
       "size": 1423,
       "policy": "if-missing"
     },
     {
       "path": "config/lvl_rank.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-lvl_rank.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-lvl_rank.json",
       "sha512": "ac3abcc6716dac9ac87b1f82d0dce2a97eb021c6bfd44f22aa6f4d776a62f1cde4edf4a53a2e8ec571939ab782f6dd310aaf0614a315980bf95c935564e5ca51",
       "size": 1497,
       "policy": "if-missing"
     },
     {
       "path": "config/cubeautovote.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-cubeautovote.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-cubeautovote.json",
       "sha512": "20360f894f5a005b6f34ed385d14e41f83dff41c7b27fff0be69d076ec5fc94420d75c07766ca6bb0653fdf0b713428b4bc9eeeed6a9f6d6c9525dde690c9357",
       "size": 210,
       "policy": "if-missing"
     },
     {
       "path": "config/spectatorinside.json",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-spectatorinside.json",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-spectatorinside.json",
       "sha512": "265beffbb71e5bf9f95255bb1742793c11e587580f5040123cdcddd86a07e5b3aff9f746801554ae4bfbb00cc600e787edb395ab237ca0766ac63eb0a602177a",
       "size": 820,
       "policy": "if-missing"
     },
     {
       "path": "config/noxesium.toml",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-noxesium.toml",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-noxesium.toml",
       "sha512": "8dbe9474f989212765f3022757c60e2c61b89ec805d282008c6b730fac0c4956f90894ad5c65c97753a4da5e64afc1cd169e8640bef4cef1db44cdf8dd40fa1d",
       "size": 58,
       "policy": "if-missing"
     },
     {
       "path": "config/resourcepackchecker/resourcepackchecker.properties",
-      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-2/config-resourcepackchecker-resourcepackchecker.properties",
+      "url": "https://github.com/SisuKah/cube-utility-client/releases/download/pack-2026.11.23-3/config-resourcepackchecker-resourcepackchecker.properties",
       "sha512": "eca945a63e43dd8ce183e0559ae486ac1aa86d7408972d97a088cb03b9031a3a3e276647473aef71ca92ee126dc7047b808101f4a352c9a442fe5fee09da3792",
       "size": 534,
       "policy": "if-missing"
