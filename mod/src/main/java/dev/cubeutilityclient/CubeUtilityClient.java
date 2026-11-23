@@ -6,6 +6,7 @@ import dev.cubeutilityclient.compat.ModMenuCompat;
 import dev.cubeutilityclient.render.Pipelines;
 import dev.cubeutilityclient.settings.SettingsScreen;
 import dev.cubeutilityclient.shelf.Shelf;
+import dev.cubeutilityclient.tab.OnlinePlayers;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -25,8 +26,9 @@ import org.slf4j.Logger;
 
 /**
  * The Cube Utility Client look inside Minecraft: a space title screen, the client's colours in
- * every menu, a dark game window with the client's name and icon, and one settings page for
- * every mod, opened with Right Shift.
+ * every menu, a dark game window with the client's name and icon, one settings page for every
+ * mod (opened with Right Shift), and the launcher's mark in the tab list in front of players who
+ * play with the client too.
  */
 public final class CubeUtilityClient implements ClientModInitializer {
     public static final String ID = "cubeutilityclient";
@@ -47,6 +49,9 @@ public final class CubeUtilityClient implements ClientModInitializer {
         // Get more: the mods players switch on in the game sleep until they're got.
         ClientLifecycleEvents.CLIENT_STARTED.register(minecraft -> Shelf.start());
         ClientPlayConnectionEvents.JOIN.register((handler, sender, minecraft) -> Shelf.joined());
+
+        // The tab marker: who else on the server plays with the client.
+        ClientTickEvents.END_CLIENT_TICK.register(OnlinePlayers::tick);
 
         // In a world with no menu open, the key works like any other.
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {

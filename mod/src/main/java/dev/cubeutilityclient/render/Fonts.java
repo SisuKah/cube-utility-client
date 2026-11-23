@@ -45,6 +45,14 @@ public final class Fonts {
         return named("ui_" + Math.max(1, Math.min(8, guiScale)));
     }
 
+    /**
+     * The tab marker's mark (TabMarker): a picture 8 GUI units tall with {@code guiScale} pixels
+     * per unit, so each of its pixels is one screen pixel.
+     */
+    public static FontDescription badge(int guiScale) {
+        return named("badge_" + Math.max(1, Math.min(8, guiScale)));
+    }
+
     /** The pixel size in one of these fonts' names, like 12 for cubeutilityclient:label_12. */
     public static float size(FontDescription font) {
         if (font instanceof FontDescription.Resource resource) {

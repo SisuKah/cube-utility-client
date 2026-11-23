@@ -1,0 +1,6 @@
+{
+  "providers": [
+    { "type": "bitmap", "file": "cubeutilityclient:font/badge_2.png", "ascent": 7, "height": 8, "chars": ["\ue000"] },
+    { "type": "space", "advances": { "\ue001": 1 } }
+  ]
+}

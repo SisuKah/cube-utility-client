@@ -13,6 +13,7 @@
     "KeyBindsListMixin",
     "KeyMappingMixin",
     "MinecraftMixin",
+    "PlayerTabOverlayMixin",
     "ScreenMixin",
     "TntRendererMixin",
     "WindowMixin"

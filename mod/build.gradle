@@ -27,6 +27,13 @@ dependencies {
 
     // Optional: only the Mods button touches it, and only when Mod Menu is installed.
     compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+    // Unit tests that run without a game (src/test), like the tab marker's hashes.
+    testImplementation "junit:junit:4.13.2"
+}
+
+test {
+    useJUnit()
 }
 
 // `./gradlew runClient` opens a test game at the size the menus were designed at.
