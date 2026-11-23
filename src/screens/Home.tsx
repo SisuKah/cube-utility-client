@@ -50,7 +50,11 @@ function signInGate(account: AccountView): SignInGate | null {
     case 'signedOut':
       return {
         headline: 'Sign in to play',
-        subline: info.message ?? 'Use the Microsoft account that owns Minecraft: Java Edition.',
+        subline:
+          info.message ??
+          (account.accounts.length > 0
+            ? 'Choose one of your accounts at the top right, or sign in with another.'
+            : 'Use the Microsoft account that owns Minecraft: Java Edition.'),
         button: { label: 'SIGN IN', onClick: account.signIn }
       }
   }

@@ -759,7 +759,8 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
         .stderr(Stdio::piped());
     #[cfg(windows)]
     process.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-    // The settings page in the game browses Modrinth and adds mods through the launcher.
+    // The settings page in the game browses Modrinth and adds mods through the launcher, and the
+    // title screen's Accounts switches account without closing the game.
     let game_api = crate::game_api::GameApi::open(app, &launcher.paths).await;
     let mut child = process.spawn().map_err(|e| Error::Message(format!("couldn't start Java: {e}")))?;
     launcher.playing.store(true, Ordering::SeqCst);

@@ -1,6 +1,8 @@
 //! The doorway from the game. While Minecraft runs, the client's settings page browses Modrinth
 //! and adds mods through the launcher, with the same checks and the same list as the Mods screen
-//! (modrinth.rs). It's a tiny HTTP server on 127.0.0.1 at a random port, answering only requests
+//! (modrinth.rs), and the title screen's Accounts switches the account Minecraft plays with,
+//! without closing it: the launcher keeps every account's sign-in and hands the game a login
+//! (auth/mod.rs). It's a tiny HTTP server on 127.0.0.1 at a random port, answering only requests
 //! that carry the random token it writes, with the port, into the game folder
 //! (config/cubeutilityclient/launcher.json) for the client mod. The server stops and the file
 //! goes when the game closes. A mod the player removes in the game goes then too, since Windows
@@ -19,7 +21,9 @@ use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::auth::{Auth, AuthError};
 use crate::error::Error;
+use crate::game::launch::Account;
 use crate::launcher::Launcher;
 use crate::modrinth;
 use crate::paths::Paths;
@@ -42,6 +46,15 @@ enum Ask {
     Remove(String),
     /// Take back a Remove before the game closes.
     Keep(String),
+    /// The accounts signed in on this PC, with their skins.
+    Accounts,
+    /// A Minecraft login for an account (by UUID), which plays from now on.
+    Login(String),
+    /// Microsoft's sign-in page in the browser; the new account's login comes back.
+    SignIn,
+    CancelSignIn,
+    /// Signs an account (by UUID) out of this PC.
+    SignOut(String),
 }
 
 /// A status code and a JSON body.
@@ -225,6 +238,7 @@ fn parse(head: &str, port: u16, token: &str) -> Result<Ask, Reply> {
     let url = Url::parse(&format!("http://127.0.0.1{target}")).map_err(|_| Reply::error(400, "Bad request."))?;
     let param = |name: &str| url.query_pairs().find(|(key, _)| key == name).map(|(_, value)| value.into_owned());
     let project = || param("project").filter(|id| modrinth::is_id(id)).ok_or_else(|| Reply::error(400, "That isn't a mod from Modrinth."));
+    let account = || param("uuid").filter(|uuid| is_uuid(uuid)).ok_or_else(|| Reply::error(400, "That isn't an account."));
     match (method, url.path()) {
         ("GET", "/modrinth/search") => Ok(Ask::Search {
             query: param("query").unwrap_or_default(),
@@ -234,9 +248,20 @@ fn parse(head: &str, port: u16, token: &str) -> Result<Ask, Reply> {
         ("POST", "/modrinth/install") => project().map(Ask::Install),
         ("POST", "/modrinth/remove") => project().map(Ask::Remove),
         ("POST", "/modrinth/keep") => project().map(Ask::Keep),
+        ("GET", "/accounts") => Ok(Ask::Accounts),
+        ("POST", "/accounts/login") => account().map(Ask::Login),
+        ("POST", "/accounts/sign-in") => Ok(Ask::SignIn),
+        ("POST", "/accounts/cancel-sign-in") => Ok(Ask::CancelSignIn),
+        ("POST", "/accounts/sign-out") => account().map(Ask::SignOut),
         (_, "/modrinth/search" | "/modrinth/installed" | "/modrinth/install" | "/modrinth/remove" | "/modrinth/keep") => Err(Reply::error(405, "Method not allowed.")),
+        (_, "/accounts" | "/accounts/login" | "/accounts/sign-in" | "/accounts/cancel-sign-in" | "/accounts/sign-out") => Err(Reply::error(405, "Method not allowed.")),
         _ => Err(Reply::error(404, "Not found.")),
     }
+}
+
+/// A Minecraft profile's UUID, with or without dashes.
+fn is_uuid(text: &str) -> bool {
+    (32..=36).contains(&text.len()) && text.chars().all(|c| c.is_ascii_hexdigit() || c == '-') && text.chars().filter(char::is_ascii_hexdigit).count() == 32
 }
 
 /// Compares the token without giving away how much of it matched.
@@ -279,8 +304,54 @@ async fn answer(app: &AppHandle, removals: &Mutex<BTreeSet<String>>, ask: Ask) -
             lock(removals).remove(&project_id);
             Ok(Reply::json(&installed(app, removals)))
         }
+        Ask::Accounts | Ask::Login(_) | Ask::SignIn | Ask::CancelSignIn | Ask::SignOut(_) => Ok(accounts(app, ask).await),
     };
     result.unwrap_or_else(|error| Reply::error(409, &error.to_string()))
+}
+
+/// The title screen's Accounts: every answer about accounts comes from the launcher's sign-ins.
+async fn accounts(app: &AppHandle, ask: Ask) -> Reply {
+    let auth = app.state::<Auth>();
+    match ask {
+        Ask::Login(uuid) => {
+            tracing::info!("the game asked to switch accounts");
+            login(auth.use_account(app, &uuid).await)
+        }
+        Ask::SignIn => {
+            tracing::info!("the game asked to add an account");
+            login(auth.add_account(app).await)
+        }
+        Ask::CancelSignIn => {
+            auth.cancel_sign_in();
+            Reply::json(&auth.game_accounts())
+        }
+        Ask::SignOut(uuid) => match auth.remove(app, &uuid).await {
+            Ok(()) => Reply::json(&auth.game_accounts()),
+            Err(error) => refusal(&error),
+        },
+        _ => Reply::json(&auth.game_accounts()),
+    }
+}
+
+/// A Minecraft login for the game. Other than the command line that starts the game, this is the
+/// only way an access token leaves the launcher.
+fn login(result: Result<Account, AuthError>) -> Reply {
+    match result {
+        Ok(account) => Reply::json(&serde_json::json!({
+            "uuid": account.uuid,
+            "name": account.name,
+            "accessToken": account.access_token,
+            "xuid": account.xuid,
+        })),
+        Err(error) => refusal(&error),
+    }
+}
+
+/// Why an account couldn't be used. A sign-in the player cancelled says so, so the game shows no
+/// error for it.
+fn refusal(error: &AuthError) -> Reply {
+    let body = serde_json::json!({ "error": error.to_string(), "cancelled": matches!(error, AuthError::Cancelled) });
+    Reply { status: 409, body: body.to_string() }
 }
 
 fn installed(app: &AppHandle, removals: &Mutex<BTreeSet<String>>) -> Installed {
@@ -340,6 +411,39 @@ mod tests {
         assert_eq!(ask("POST", "/modrinth/install?project=AANobbMI"), Ok(Ask::Install("AANobbMI".into())));
         assert_eq!(ask("POST", "/modrinth/remove?project=AANobbMI"), Ok(Ask::Remove("AANobbMI".into())));
         assert_eq!(ask("POST", "/modrinth/keep?project=AANobbMI"), Ok(Ask::Keep("AANobbMI".into())));
+    }
+
+    #[test]
+    fn reads_account_requests() {
+        const UUID: &str = "069a79f444e94726a5befca90e38aaf5";
+        assert_eq!(ask("GET", "/accounts"), Ok(Ask::Accounts));
+        assert_eq!(ask("POST", &format!("/accounts/login?uuid={UUID}")), Ok(Ask::Login(UUID.into())));
+        assert_eq!(ask("POST", "/accounts/login?uuid=069a79f4-44e9-4726-a5be-fca90e38aaf5"), Ok(Ask::Login("069a79f4-44e9-4726-a5be-fca90e38aaf5".into())));
+        assert_eq!(ask("POST", "/accounts/sign-in"), Ok(Ask::SignIn));
+        assert_eq!(ask("POST", "/accounts/cancel-sign-in"), Ok(Ask::CancelSignIn));
+        assert_eq!(ask("POST", &format!("/accounts/sign-out?uuid={UUID}")), Ok(Ask::SignOut(UUID.into())));
+
+        assert_eq!(ask("POST", "/accounts/login"), Err(400));
+        assert_eq!(ask("POST", "/accounts/login?uuid=Notch"), Err(400));
+        assert_eq!(ask("POST", "/accounts/sign-out?uuid=..%2F..%2Fevil-0000000000000000000000000"), Err(400));
+        assert_eq!(ask("GET", &format!("/accounts/login?uuid={UUID}")), Err(405));
+        assert_eq!(ask("POST", "/accounts"), Err(405));
+    }
+
+    #[test]
+    fn logins_and_refusals_for_the_game() {
+        let ok = login(Ok(Account { name: "Steve".into(), uuid: "abc".into(), access_token: "secret".into(), xuid: "0".into() }));
+        assert_eq!(ok.status, 200);
+        let body: serde_json::Value = serde_json::from_str(&ok.body).unwrap();
+        assert_eq!((body["name"].as_str(), body["accessToken"].as_str()), (Some("Steve"), Some("secret")));
+
+        let cancelled = login(Err(AuthError::Cancelled));
+        assert_eq!(cancelled.status, 409);
+        let body: serde_json::Value = serde_json::from_str(&cancelled.body).unwrap();
+        assert_eq!(body["cancelled"], true);
+        let offline: serde_json::Value = serde_json::from_str(&login(Err(AuthError::Offline)).body).unwrap();
+        assert_eq!(offline["cancelled"], false);
+        assert!(offline["error"].as_str().unwrap().contains("internet"));
     }
 
     #[test]

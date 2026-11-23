@@ -181,7 +181,7 @@ export const launcher = {
     listen<PackInfo>('pack://info', (event) => callback(event.payload))
 }
 
-/** Who's signed in (AccountState in src-tauri/src/auth/mod.rs). */
+/** How the account that plays is doing (AccountState in src-tauri/src/auth/mod.rs). */
 export type AccountState =
   | { state: 'signedOut'; message: string | null }
   | { state: 'checking' }
@@ -191,15 +191,36 @@ export type AccountState =
   | { state: 'problem'; message: string }
   | { state: 'offline'; name: string; uuid: string; skin: string | null }
 
-/** Release builds only start the game for a signed-in player. */
-export type AccountInfo = AccountState & { signInRequired: boolean }
+/** An account signed in on this PC (AccountSummary in src-tauri/src/auth/mod.rs). */
+export interface SavedAccount {
+  uuid: string
+  name: string
+  /** The skin as a data: URL. */
+  skin: string | null
+  /** PLAY starts with this one. */
+  active: boolean
+}
+
+export type AccountInfo = AccountState & {
+  /** Release builds only start the game for a signed-in player. */
+  signInRequired: boolean
+  /** Every account signed in on this PC, in the order they were added. */
+  accounts: SavedAccount[]
+  /** Why the last switch or added account didn't work, while the account that plays is fine. */
+  notice: string | null
+}
 
 export const account = {
   state: () => invoke<AccountInfo>('account_state'),
-  /** Opens Microsoft's sign-in page in the player's browser. */
+  /** Opens Microsoft's sign-in page in the player's browser; the account that signs in is added and plays. */
   signIn: () => invoke<void>('sign_in'),
   cancelSignIn: () => invoke<void>('cancel_sign_in'),
+  /** Signs out the account that plays; the next one on the list plays instead. */
   signOut: () => invoke<void>('sign_out'),
+  /** PLAY starts with this account from now on. Fails with the reason when it can't sign in. */
+  switchTo: (uuid: string) => invoke<void>('switch_account', { uuid }),
+  /** Forgets an account on this PC. */
+  remove: (uuid: string) => invoke<void>('remove_account', { uuid }),
   onState: (callback: (info: AccountInfo) => void): Promise<UnlistenFn> =>
     listen<AccountInfo>('account://state', (event) => callback(event.payload))
 }

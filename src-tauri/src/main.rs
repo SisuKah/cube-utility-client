@@ -83,6 +83,8 @@ fn main() {
             auth::sign_in,
             auth::cancel_sign_in,
             auth::sign_out,
+            auth::switch_account,
+            auth::remove_account,
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Cube Utility Client");

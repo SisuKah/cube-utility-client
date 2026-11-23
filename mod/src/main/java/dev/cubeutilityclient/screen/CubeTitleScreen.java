@@ -1,6 +1,7 @@
 package dev.cubeutilityclient.screen;
 
 import dev.cubeutilityclient.CubeUtilityClient;
+import dev.cubeutilityclient.account.Accounts;
 import dev.cubeutilityclient.render.Fonts;
 import dev.cubeutilityclient.render.LineIcon;
 import dev.cubeutilityclient.render.Paint;
@@ -27,7 +28,8 @@ import net.minecraft.resources.Identifier;
 /**
  * The client's title screen: CUBE UTILITY CLIENT over a turning galaxy, one gold button that
  * joins CubeCraft, Singleplayer and Multiplayer, and round buttons for Mods (every installed mod,
- * with its settings), Settings and Quit.
+ * with its settings), Settings and Quit. At the top left, the account that plays opens Accounts,
+ * which switches account without closing the game.
  *
  * It stays a {@link TitleScreen} so the game's own checks for "on the title screen" still hold,
  * but draws nothing of vanilla's: no panorama, logo, splash text or Realms notifications.
@@ -39,6 +41,7 @@ public final class CubeTitleScreen extends TitleScreen {
     private final long opened = System.nanoTime();
     private PillButton play, singleplayer, multiplayer;
     private IconButton mods, settings, quit;
+    private AccountButton account;
     private TextLink credits;
 
     public CubeTitleScreen() {
@@ -55,6 +58,9 @@ public final class CubeTitleScreen extends TitleScreen {
         this.settings = this.addRenderableWidget(new IconButton(LineIcon.SETTINGS, Component.translatable("menu.options"),
                 () -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
         this.quit = this.addRenderableWidget(new IconButton(LineIcon.QUIT, Component.translatable("menu.quit"), this.minecraft::stop));
+        this.account = this.addRenderableWidget(new AccountButton(() -> this.minecraft.gui.setScreen(new AccountsScreen(this))));
+        // The launcher's copy of the account's skin, for the face on the button.
+        Accounts.refresh();
         this.credits = this.addRenderableWidget(new TextLink(Component.translatable("title.credits"),
                 () -> this.minecraft.gui.setScreen(new CreditsAndAttributionScreen(this))));
         this.layout();
@@ -104,6 +110,8 @@ public final class CubeTitleScreen extends TitleScreen {
                 x -= size + gap;
             }
         }
+        // Opposite the round buttons, the same height and distance from the edge.
+        this.account.place(Math.round(28f * s), top, size, s, g, label);
         this.credits.place(w - 28f * s, h - 21f * s, Fonts.label(Math.max(9f, 11f * s)), g);
     }
 
@@ -146,6 +154,7 @@ public final class CubeTitleScreen extends TitleScreen {
                 button.appear(first);
             }
         }
+        this.account.appear(first);
         for (GuiEventListener child : this.children()) {
             if (child instanceof Renderable renderable) {
                 renderable.extractRenderState(graphics, mouseX, mouseY, a);

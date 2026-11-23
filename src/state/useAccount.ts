@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { account, inApp, type AccountInfo } from '../native'
+import { account, inApp, type AccountInfo, type SavedAccount } from '../native'
 
-/** The browser preview pretends someone called "Player" is signed in. */
-const DEMO: AccountInfo = { state: 'signedIn', name: 'Player', uuid: '', skin: null, slim: false, signInRequired: false }
+/** The browser preview pretends two accounts are signed in, so the account menu can be tried. */
+const DEMO_ACCOUNTS: SavedAccount[] = [
+  { uuid: 'demo-player', name: 'Player', skin: null, active: true },
+  { uuid: 'demo-alt', name: 'PlayerAlt', skin: null, active: false }
+]
+const DEMO: AccountInfo = { state: 'signedIn', name: 'Player', uuid: 'demo-player', skin: null, slim: false, signInRequired: false, accounts: DEMO_ACCOUNTS, notice: null }
 
 export interface AccountView {
   info: AccountInfo
@@ -12,9 +16,15 @@ export interface AccountView {
   note: string
   skin?: string
   slim: boolean
+  /** Every account signed in on this PC. */
+  accounts: SavedAccount[]
+  /** The account being switched to, while it signs in. */
+  switching?: string
   signIn: () => void
   cancelSignIn: () => void
   signOut: () => void
+  switchTo: (uuid: string) => void
+  remove: (uuid: string) => void
 }
 
 function describe(info: AccountInfo): { name: string; note: string; skin?: string; slim: boolean } {
@@ -36,8 +46,18 @@ function describe(info: AccountInfo): { name: string; note: string; skin?: strin
   }
 }
 
+/** The preview's pretend accounts once one of them plays. */
+function demoPlaying(uuid: string, accounts: SavedAccount[]): AccountInfo {
+  const list = accounts.map((a) => ({ ...a, active: a.uuid === uuid }))
+  const playing = list.find((a) => a.active)
+  return playing
+    ? { state: 'signedIn', name: playing.name, uuid: playing.uuid, skin: null, slim: false, signInRequired: false, accounts: list, notice: null }
+    : { state: 'signedOut', message: null, signInRequired: false, accounts: list, notice: null }
+}
+
 export function useAccount(): AccountView {
-  const [info, setInfo] = useState<AccountInfo>(inApp ? { state: 'checking', signInRequired: false } : DEMO)
+  const [info, setInfo] = useState<AccountInfo>(inApp ? { state: 'checking', signInRequired: false, accounts: [], notice: null } : DEMO)
+  const [switching, setSwitching] = useState<string>()
 
   // Listen first, then ask for the current state, so no change slips through.
   useEffect(() => {
@@ -60,22 +80,53 @@ export function useAccount(): AccountView {
 
   const signIn = useCallback(() => {
     if (!inApp) {
-      setInfo({ state: 'signingIn', signInRequired: false })
+      setInfo((current) => ({ ...current, state: 'signingIn' }))
       setTimeout(() => setInfo(DEMO), 1500)
       return
     }
-    account.signIn().catch((error: unknown) => setInfo((current) => ({ state: 'problem', message: String(error), signInRequired: current.signInRequired })))
+    account.signIn().catch((error: unknown) => setInfo((current) => ({ ...current, state: 'problem', message: String(error) })))
   }, [])
 
   const cancelSignIn = useCallback(() => {
     if (inApp) account.cancelSignIn().catch(() => {})
-    else setInfo({ state: 'signedOut', message: null, signInRequired: false })
+    else setInfo(DEMO)
+  }, [])
+
+  const switchTo = useCallback((uuid: string) => {
+    setSwitching(uuid)
+    if (!inApp) {
+      setTimeout(() => {
+        setInfo((current) => demoPlaying(uuid, current.accounts))
+        setSwitching(undefined)
+      }, 700)
+      return
+    }
+    // A failed switch shows its reason as the state's notice.
+    account
+      .switchTo(uuid)
+      .catch(() => {})
+      .finally(() => setSwitching(undefined))
+  }, [])
+
+  const remove = useCallback((uuid: string) => {
+    if (!inApp) {
+      setInfo((current) => {
+        const left = current.accounts.filter((a) => a.uuid !== uuid)
+        const playing = left.find((a) => a.active) ?? left[0]
+        return demoPlaying(playing?.uuid ?? '', left)
+      })
+      return
+    }
+    account.remove(uuid).catch(() => {})
   }, [])
 
   const signOut = useCallback(() => {
-    if (inApp) account.signOut().catch(() => {})
-    else setInfo({ state: 'signedOut', message: null, signInRequired: false })
-  }, [])
+    if (!inApp) {
+      remove(info.accounts.find((a) => a.active)?.uuid ?? '')
+      return
+    }
+    account.signOut().catch(() => {})
+  }, [info.accounts, remove])
 
-  return { info, ...describe(info), signIn, cancelSignIn, signOut }
+  return { info, ...describe(info), accounts: info.accounts, switching, signIn, cancelSignIn, signOut, switchTo, remove }
 }

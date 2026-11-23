@@ -10,8 +10,12 @@
     "GuiMixin",
     "KeyBindsListMixin",
     "KeyMappingMixin",
+    "MinecraftAccessor",
     "MinecraftMixin",
+    "MinecraftServicesMixin",
+    "PackDownloaderMixin",
     "PlayerTabOverlayMixin",
+    "RealmsClientAccessor",
     "ScreenMixin",
     "TntRendererMixin",
     "WindowMixin"
