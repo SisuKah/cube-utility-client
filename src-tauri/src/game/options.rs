@@ -3,8 +3,10 @@
 //! title screen. On a player's first launch it also brings over the settings of the Minecraft
 //! they already play: keybinds, video, sound and language. The pack's own defaults (the pack
 //! owner's settings, in config/cubeutilityclient/default-options.txt) fill in the rest, like
-//! the keys for the pack's mods, or everything for a player with no other Minecraft.
+//! the keys for the pack's mods, or everything for a player with no other Minecraft. Keys that
+//! arrive later, with a mod a pack update brings, are handed out once by `give_pack_keys`.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -19,6 +21,13 @@ const NOT_COPIED: &[&str] = &["resourcePacks", "incompatibleResourcePacks"];
 
 /// The pack's default settings, inside the game folder (a pack config file).
 const PACK_DEFAULTS: &str = "config/cubeutilityclient/default-options.txt";
+
+/// The pack keys this player has been given, or already had set their own way, one per line
+/// (in the launcher's state folder). Each is only ever handed out once.
+const KEYS_GIVEN: &str = "pack-keys-given.txt";
+
+/// How options.txt writes a key with nothing on it.
+const UNBOUND: &str = "key.keyboard.unknown";
 
 /// options.txt as ordered `key:value` lines. Values can hold colons too (`lastServer`), so a
 /// line splits at its first one, the way Minecraft reads it.
@@ -207,6 +216,56 @@ pub fn prepare(paths: &Paths, others: &[Found]) -> std::io::Result<Prepared> {
     Ok(result)
 }
 
+/// Gives the player the pack's keys they don't have yet, once each. A mod that a pack update
+/// brings often has no key of its own, so Minecraft writes its key unbound (Cube Utility's
+/// freelook did); the pack's binding goes there. A key the player set themselves stays theirs.
+/// A pack key waits while it would share a button with another of the player's keys that the
+/// pack keeps on a different one (vanilla's Pick Block on the middle mouse, say). Returns the
+/// keys it bound.
+pub fn give_pack_keys(paths: &Paths) -> std::io::Result<Vec<String>> {
+    let file = paths.instance().join("options.txt");
+    let (Some(defaults), Some(mut options)) = (read_options(&paths.instance().join(PACK_DEFAULTS)), read_options(&file)) else {
+        return Ok(Vec::new());
+    };
+    let record = paths.state().join(KEYS_GIVEN);
+    let mut given: BTreeSet<String> = std::fs::read_to_string(&record)
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(str::to_string)
+        .collect();
+    let before = given.len();
+    let mut bound = Vec::new();
+    for (key, input) in defaults.lines.iter().filter(|(key, input)| key.starts_with("key_") && input != UNBOUND) {
+        if given.contains(key) {
+            continue;
+        }
+        if options.get(key).is_some_and(|theirs| theirs != UNBOUND) {
+            given.insert(key.clone());
+            continue;
+        }
+        let clash = options
+            .lines
+            .iter()
+            .any(|(other, theirs)| other != key && other.starts_with("key_") && theirs == input && defaults.get(other) != Some(input.as_str()));
+        if clash {
+            continue;
+        }
+        options.set(key, input);
+        bound.push(key.clone());
+        given.insert(key.clone());
+    }
+    if !bound.is_empty() {
+        write_atomic(&file, options.to_text().as_bytes())?;
+    }
+    if given.len() != before {
+        let text: String = given.iter().map(|key| format!("{key}\n")).collect();
+        write_atomic(&record, text.as_bytes())?;
+    }
+    Ok(bound)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -346,6 +405,62 @@ mod tests {
         write(&theirs, THEIRS);
         assert_eq!(prepare(&paths, &[found(theirs, "Minecraft Launcher")]).unwrap(), Prepared::Unchanged);
         assert_eq!(std::fs::read_to_string(paths.instance().join("options.txt")).unwrap(), played);
+    }
+
+    const PACK_KEYS: &str = "version:5023\nkey_key.pickItem:key.keyboard.p\nkey_key.spectatorHotbar:key.mouse.middle\nkey_key.cubeutility.freelook:key.mouse.middle\nkey_key.cubeutility.zoom:key.keyboard.c\nkey_key.cubeutility.vote:key.keyboard.unknown\n";
+
+    fn played(paths: &Paths, options: &str) {
+        write(&paths.instance().join(PACK_DEFAULTS), PACK_KEYS);
+        write(&paths.instance().join("options.txt"), options);
+    }
+
+    fn key(paths: &Paths, name: &str) -> Option<String> {
+        Options::parse(&std::fs::read_to_string(paths.instance().join("options.txt")).unwrap()).get(name).map(str::to_string)
+    }
+
+    #[test]
+    fn a_key_a_pack_update_brought_unbound_gets_the_packs_binding_once() {
+        let dir = TempDir::new("keys-once");
+        let paths = Paths::new(dir.0.join("data"));
+        // Like the player whose freelook stayed unbound: the middle mouse is the spectator
+        // hotbar's too, as in the pack, so sharing it is fine.
+        played(&paths, "version:5023\nkey_key.spectatorHotbar:key.mouse.middle\nkey_key.cubeutility.freelook:key.keyboard.unknown\nkey_key.cubeutility.zoom:key.keyboard.grave.accent\nonboardAccessibility:false\n");
+
+        let bound = give_pack_keys(&paths).unwrap();
+        assert_eq!(bound, ["key_key.pickItem", "key_key.cubeutility.freelook"]);
+        assert_eq!(key(&paths, "key_key.cubeutility.freelook").as_deref(), Some("key.mouse.middle"));
+        assert_eq!(key(&paths, "key_key.cubeutility.zoom").as_deref(), Some("key.keyboard.grave.accent"), "their own key stays");
+        assert_eq!(key(&paths, "key_key.cubeutility.vote"), None, "keys the pack leaves unbound aren't given");
+
+        // Unbinding it again is their choice now.
+        write(&paths.instance().join("options.txt"), "version:5023\nkey_key.cubeutility.freelook:key.keyboard.unknown\n");
+        assert!(give_pack_keys(&paths).unwrap().is_empty());
+        assert_eq!(key(&paths, "key_key.cubeutility.freelook").as_deref(), Some(UNBOUND));
+    }
+
+    #[test]
+    fn a_pack_key_waits_while_it_would_share_a_button_the_pack_keeps_apart() {
+        let dir = TempDir::new("keys-clash");
+        let paths = Paths::new(dir.0.join("data"));
+        // Vanilla's Pick Block is on the middle mouse; the pack keeps it on P.
+        played(&paths, "version:5023\nkey_key.pickItem:key.mouse.middle\nkey_key.spectatorHotbar:key.mouse.middle\nkey_key.cubeutility.freelook:key.keyboard.unknown\n");
+        assert!(!give_pack_keys(&paths).unwrap().contains(&"key_key.cubeutility.freelook".to_string()));
+        assert_eq!(key(&paths, "key_key.cubeutility.freelook").as_deref(), Some(UNBOUND));
+
+        // Once they move Pick Block, freelook gets the middle mouse.
+        write(&paths.instance().join("options.txt"), "version:5023\nkey_key.pickItem:key.keyboard.f\nkey_key.spectatorHotbar:key.mouse.middle\nkey_key.cubeutility.freelook:key.keyboard.unknown\n");
+        assert_eq!(give_pack_keys(&paths).unwrap(), ["key_key.cubeutility.freelook"]);
+        assert_eq!(key(&paths, "key_key.cubeutility.freelook").as_deref(), Some("key.mouse.middle"));
+    }
+
+    #[test]
+    fn without_the_packs_defaults_or_a_played_game_nothing_changes() {
+        let dir = TempDir::new("keys-none");
+        let paths = Paths::new(dir.0.join("data"));
+        assert!(give_pack_keys(&paths).unwrap().is_empty());
+        write(&paths.instance().join("options.txt"), "version:5023\n");
+        assert!(give_pack_keys(&paths).unwrap().is_empty());
+        assert!(!paths.state().join(KEYS_GIVEN).exists());
     }
 
     #[test]

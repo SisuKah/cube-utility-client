@@ -694,8 +694,9 @@ async fn install(app: &AppHandle, plan: &GamePlan, missing: Vec<Download>) -> Re
 }
 
 /// Straight to the title screen: Minecraft's welcome screen is marked as done, and on the first
-/// launch the player's settings come over from the Minecraft they already play. A problem here
-/// never stops the game from starting.
+/// launch the player's settings come over from the Minecraft they already play. Keys for mods a
+/// pack update brought get the pack's binding once. A problem here never stops the game from
+/// starting.
 async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
     let paths = launcher.paths.clone();
     let (appdata, home) = (app.path().data_dir().ok(), app.path().home_dir().ok());
@@ -704,16 +705,25 @@ async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
             (Some(appdata), Some(home)) => game::options::find_others(&appdata, &home),
             _ => Vec::new(),
         };
-        game::options::prepare(&paths, &others)
+        let prepared = game::options::prepare(&paths, &others);
+        (prepared, game::options::give_pack_keys(&paths))
     })
     .await;
+    let Ok((prepared, keys)) = prepared else {
+        tracing::warn!("couldn't prepare options.txt");
+        return;
+    };
     match prepared {
-        Ok(Ok(game::options::Prepared::Imported(from))) => tracing::info!("brought the player's Minecraft settings over from {from}"),
-        Ok(Ok(game::options::Prepared::PackDefaults)) => tracing::info!("started options.txt from the pack's default settings"),
-        Ok(Ok(game::options::Prepared::SkippedWelcome)) => tracing::info!("marked Minecraft's welcome screen as done"),
-        Ok(Ok(game::options::Prepared::Unchanged)) => {}
-        Ok(Err(error)) => tracing::warn!("couldn't prepare options.txt ({error}); Minecraft may show its welcome screen"),
-        Err(error) => tracing::warn!("couldn't prepare options.txt ({error})"),
+        Ok(game::options::Prepared::Imported(from)) => tracing::info!("brought the player's Minecraft settings over from {from}"),
+        Ok(game::options::Prepared::PackDefaults) => tracing::info!("started options.txt from the pack's default settings"),
+        Ok(game::options::Prepared::SkippedWelcome) => tracing::info!("marked Minecraft's welcome screen as done"),
+        Ok(game::options::Prepared::Unchanged) => {}
+        Err(error) => tracing::warn!("couldn't prepare options.txt ({error}); Minecraft may show its welcome screen"),
+    }
+    match keys {
+        Ok(keys) if !keys.is_empty() => tracing::info!("gave the player the pack's keys for {}", keys.join(", ")),
+        Ok(_) => {}
+        Err(error) => tracing::warn!("couldn't give the player the pack's keys ({error})"),
     }
 }
 
