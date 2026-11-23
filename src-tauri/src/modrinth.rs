@@ -188,7 +188,7 @@ fn versions_url(project_id: &str, minecraft: &str, loader: &str) -> Url {
 }
 
 /// Modrinth's IDs are short base-62 strings. Anything else never reaches a URL.
-fn is_id(id: &str) -> bool {
+pub(crate) fn is_id(id: &str) -> bool {
     (1..=32).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric())
 }
 
@@ -552,6 +552,16 @@ async fn remove(paths: &Paths, project_id: &str) -> Result<Vec<String>> {
     Store { mods: keep }.save(paths)?;
     tracing::info!("removed from Modrinth installs: {}", gone.iter().map(|m| m.title.as_str()).collect::<Vec<_>>().join(", "));
     Ok(removed)
+}
+
+/// Removes a mod the player asked to remove inside the game, once the game has closed and let
+/// go of its jar (game_api.rs).
+pub async fn remove_now(app: &AppHandle, project_id: &str) -> Result<()> {
+    let launcher = app.state::<Launcher>();
+    let paths = launcher.paths().clone();
+    let removed = remove(&paths, project_id).await?;
+    launcher.note_extras(app, &[], &removed);
+    Ok(())
 }
 
 /// After a sync: drops the player's copies of mods the pack now has itself. Returns the jars

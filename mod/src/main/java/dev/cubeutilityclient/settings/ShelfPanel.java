@@ -370,7 +370,7 @@ final class ShelfPanel {
     }
 
     /** Words onto at most {@code lines} lines, the last ending in "…" when they don't fit. */
-    private static List<String> wrap(String text, FontDescription font, float width, int lines) {
+    static List<String> wrap(String text, FontDescription font, float width, int lines) {
         List<String> out = new ArrayList<>();
         StringBuilder line = new StringBuilder();
         String[] words = text.split(" ");

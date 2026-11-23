@@ -40,14 +40,15 @@ import net.minecraft.resources.Identifier;
  *
  * <p>At the top of the list, Get more offers popular mods that come with the client asleep
  * ({@link ShelfPanel}): one click switches a mod on, with no restart, and it gets a tab of its
- * own under "Added mods".
+ * own under "Added mods". Under it, Browse Modrinth ({@link ModrinthPanel}) searches Modrinth and
+ * adds any mod through the launcher, ready the next time the game starts.
  */
 public final class SettingsScreen extends Screen {
     private static final int TEXT = 0xE9EFEE, TEXT_2 = 0x9AABA9, TEXT_3 = 0x7E8F8D, GOLD = 0xE4C084, GOLD_DIM = 0xCDA76A, TEAL = 0x46C2B8;
     /** Settings screens are laid out at least this wide (GUI units) when the window allows. */
     private static final int CHILD_MIN_WIDTH = 316;
-    /** Stands for Get more where a tab's id goes. */
-    private static final String SHELF = "get-more";
+    /** Stand for Get more and Browse Modrinth where a tab's id goes. */
+    private static final String SHELF = "get-more", MODRINTH = "modrinth";
     /** How long a tab that was just got glows in the list, in seconds. */
     private static final float ARRIVAL = 1.6f;
     private static final Identifier GLOW = SpaceTextures.texture("glow");
@@ -60,6 +61,8 @@ public final class SettingsScreen extends Screen {
     private final List<Row> rows = new ArrayList<>();
     /** Get more, while it shows on the right instead of a tab's settings. */
     private ShelfPanel shelf;
+    /** Browse Modrinth, likewise. */
+    private ModrinthPanel modrinth;
     /** When the tab of each mod just got appeared in the list, for a short glow. */
     private final Map<String, Long> arrived = new HashMap<>();
     private final long opened = System.nanoTime();
@@ -90,8 +93,8 @@ public final class SettingsScreen extends Screen {
     private float g, s, px, py, pw, ph, pad, sideW, listTop, listBottom, rowH, headerH, contentX, bodyX, bodyY, bodyW, bodyH;
     private float searchX, searchY, searchW, searchH;
 
-    /** One line of the list: a tab, a group's heading, or Get more. */
-    private record Row(ModEntry tab, ModEntry.Group header, boolean shelf) {
+    /** One line of the list: a tab, a group's heading, Get more or Browse Modrinth. */
+    private record Row(ModEntry tab, ModEntry.Group header, boolean shelf, boolean modrinth) {
     }
 
     public SettingsScreen(Screen parent) {
@@ -152,9 +155,13 @@ public final class SettingsScreen extends Screen {
             this.reentered = true;
         } else if (this.shelf != null) {
             this.placeShelf();
+        } else if (this.modrinth != null) {
+            this.placeModrinth();
         } else if (this.selected == null) {
             if (SHELF.equals(remembered) && !Shelf.mods().isEmpty()) {
                 this.openShelf();
+            } else if (MODRINTH.equals(remembered)) {
+                this.openModrinth();
             } else {
                 this.select(this.tabs.stream().filter(m -> m.id.equals(remembered)).findFirst().orElse(this.tabs.isEmpty() ? null : this.tabs.get(0)));
             }
@@ -172,15 +179,29 @@ public final class SettingsScreen extends Screen {
         String words = this.query.trim().toLowerCase(Locale.ROOT);
         this.rows.clear();
         if (shelfMatches(words)) {
-            this.rows.add(new Row(null, null, true));
+            this.rows.add(new Row(null, null, true, false));
+        }
+        if (modrinthMatches(words)) {
+            this.rows.add(new Row(null, null, false, true));
         }
         for (ModEntry.Group group : ModEntry.Group.values()) {
             List<ModEntry> found = this.tabs.stream().filter(m -> m.group == group && m.matches(words)).toList();
             if (!found.isEmpty()) {
-                this.rows.add(new Row(null, group, false));
-                found.forEach(m -> this.rows.add(new Row(m, null, false)));
+                this.rows.add(new Row(null, group, false, false));
+                found.forEach(m -> this.rows.add(new Row(m, null, false, false)));
             }
         }
+    }
+
+    /** Browse Modrinth shows in the list unless a search is clearly about something else. */
+    private static boolean modrinthMatches(String words) {
+        String all = "browse modrinth search find download install add more mods";
+        for (String word : words.split("\\s+")) {
+            if (!word.isEmpty() && !all.contains(word)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static List<ModEntry> visibleTabs() {
@@ -227,6 +248,27 @@ public final class SettingsScreen extends Screen {
     private void placeShelf() {
         if (this.shelf != null) {
             this.shelf.place(this.bodyX, this.bodyY, this.bodyW, this.bodyH, this.s, this.g);
+        }
+    }
+
+    /** Shows Browse Modrinth on the right, its search ready for typing. */
+    void openModrinth() {
+        if (this.modrinth == null) {
+            this.closeChild();
+            this.selected = null;
+            this.failed = false;
+            remembered = MODRINTH;
+            this.setSearchFocused(false);
+            this.modrinth = new ModrinthPanel();
+            this.placeModrinth();
+            this.placeOpenFull();
+            this.updateTextInput();
+        }
+    }
+
+    private void placeModrinth() {
+        if (this.modrinth != null) {
+            this.modrinth.place(this.bodyX, this.bodyY, this.bodyW, this.bodyH, this.s, this.g);
         }
     }
 
@@ -405,6 +447,10 @@ public final class SettingsScreen extends Screen {
     /** Lets the mod's settings save what they keep when closed, and lets go of them (or of Get more). */
     private void closeChild() {
         this.shelf = null;
+        if (this.modrinth != null) {
+            this.modrinth = null;
+            this.updateTextInput();
+        }
         if (this.panel != null) {
             OptionsPanel leaving = this.panel;
             this.panel = null;
@@ -496,6 +542,14 @@ public final class SettingsScreen extends Screen {
                 CubeUtilityClient.LOGGER.warn("Get more couldn't be drawn", error);
                 this.shelf = null;
             }
+        } else if (this.modrinth != null) {
+            try {
+                this.modrinth.extract(graphics, paint, mx, my, k);
+            } catch (Throwable error) {
+                CubeUtilityClient.LOGGER.warn("Browse Modrinth couldn't be drawn", error);
+                this.modrinth = null;
+                this.updateTextInput();
+            }
         } else if (this.panel != null) {
             try {
                 this.panel.extract(graphics, paint, mx, my, k);
@@ -547,7 +601,7 @@ public final class SettingsScreen extends Screen {
                 continue;
             }
             if (y + this.rowH > this.listTop && y < this.listBottom) {
-                boolean chosen = row.shelf ? this.shelf != null : row.tab == this.selected;
+                boolean chosen = row.shelf ? this.shelf != null : row.modrinth ? this.modrinth != null : row.tab == this.selected;
                 boolean hover = !chosen && mx >= rowLeft && mx < rowRight && my >= Math.max(y, this.listTop) && my < Math.min(y + this.rowH, this.listBottom);
                 if (chosen || hover) {
                     Paint.roundedRect(rowsBatch, rowLeft, y + 1f, rowRight - rowLeft, this.rowH - 2f, 11f * this.s, chosen ? 1f : 0f,
@@ -572,6 +626,10 @@ public final class SettingsScreen extends Screen {
                     if (left > 0) {
                         maxW -= this.extractBadge(paint, String.valueOf(left), rowRight - Math.round(this.pad * 0.45f), y + this.rowH / 2f, k);
                     }
+                } else if (row.modrinth) {
+                    this.extractModrinthIcon(paint, ix, iy, icon, k);
+                    name = "Browse Modrinth";
+                    blurb = "Thousands more mods, ready next start.";
                 } else {
                     this.extractIcon(paint, row.tab, ix, iy, icon, k);
                     name = row.tab.title;
@@ -651,6 +709,14 @@ public final class SettingsScreen extends Screen {
         Paint.icon(tile, LineIcon.SPARKLE, Math.round(x + (size - mark) / 2f), Math.round(y + (size - mark) / 2f), mark, Rgb.alpha(GOLD, k));
     }
 
+    /** Browse Modrinth's icon: a search mark on a teal tile. */
+    private void extractModrinthIcon(Paint paint, float x, float y, float size, float k) {
+        QuadBatch tile = paint.solid();
+        Paint.roundedRect(tile, x, y, size, size, size * 0.26f, 0f, Rgb.alpha(TEAL, 0.16f * k), 0);
+        float mark = Math.round(size * 0.56f);
+        Paint.icon(tile, LineIcon.SEARCH, Math.round(x + (size - mark) / 2f), Math.round(y + (size - mark) / 2f), mark, Rgb.alpha(TEAL, k));
+    }
+
     /** A small gold count, its right edge at {@code right}, centred on {@code cy}. Returns the room it takes. */
     private float extractBadge(Paint paint, String text, float right, float cy, float k) {
         FontDescription font = Fonts.strong(Math.max(9f, 10f * this.s));
@@ -671,6 +737,11 @@ public final class SettingsScreen extends Screen {
             title = "Get more";
             blurb = "Popular mods that come with the client. Get one and it's on straight away.";
             credit = "No download and no restart. Each mod you get has its own tab under Added mods.";
+        } else if (this.modrinth != null) {
+            this.extractModrinthIcon(paint, x, y, icon, k);
+            title = "Browse Modrinth";
+            blurb = "Any mod for this Minecraft, from Modrinth. Add one and it's ready the next time you start the game.";
+            credit = "Added through the launcher, with the libraries a mod needs. They show in its Mods screen too.";
         } else if (this.selected != null) {
             ModEntry tab = this.selected;
             this.extractIcon(paint, tab, x, y, icon, k);
@@ -738,7 +809,7 @@ public final class SettingsScreen extends Screen {
     }
 
     /** Two letters for a tab without an icon: "Packet logger" → "PL". */
-    private static String monogram(String name) {
+    static String monogram(String name) {
         List<String> parts = new ArrayList<>();
         for (String word : name.split("[^\\p{L}\\p{N}]+")) {
             if (!word.isEmpty()) {
@@ -761,13 +832,16 @@ public final class SettingsScreen extends Screen {
             if (focused && this.panel != null) {
                 this.panel.commitEdit();
             }
+            if (focused && this.modrinth != null) {
+                this.modrinth.blur();
+            }
             this.updateTextInput();
         }
     }
 
     /** Starts or stops the window's text input, as Minecraft's own text boxes do. */
     private void updateTextInput() {
-        boolean wanted = this.searchFocused || this.panel != null && this.panel.isTyping();
+        boolean wanted = this.searchFocused || this.panel != null && this.panel.isTyping() || this.modrinth != null && this.modrinth.isTyping();
         if (wanted != this.textInput) {
             this.textInput = wanted;
             this.minecraft.onTextInputFocusChange(this, wanted);
@@ -803,7 +877,7 @@ public final class SettingsScreen extends Screen {
     private void revealSelected() {
         float y = 0f;
         for (Row row : this.rows) {
-            if (row.header == null && (row.shelf ? this.shelf != null : row.tab == this.selected)) {
+            if (row.header == null && (row.shelf ? this.shelf != null : row.modrinth ? this.modrinth != null : row.tab == this.selected)) {
                 float view = this.listBottom - this.listTop;
                 if (y < this.scrollGoal) {
                     this.scrollGoal = Math.max(0f, y - this.headerH);
@@ -829,6 +903,17 @@ public final class SettingsScreen extends Screen {
             this.setFocused(null);
             this.childFocused = false;
             return this.shelf.mouseClicked(mx, my);
+        }
+        if (this.modrinth != null) {
+            if (this.modrinth.contains(mx, my) && !this.close.isMouseOver(event.x(), event.y())) {
+                this.setFocused(null);
+                this.childFocused = false;
+                boolean used = this.modrinth.mouseClicked(mx, my);
+                this.updateTextInput();
+                return used;
+            }
+            this.modrinth.blur();
+            this.updateTextInput();
         }
         if (this.panel != null) {
             if (this.panel.contains(mx, my) && !this.close.isMouseOver(event.x(), event.y())) {
@@ -861,6 +946,12 @@ public final class SettingsScreen extends Screen {
             this.setFocused(null);
             if (row.shelf) {
                 this.openShelf();
+            } else if (row.modrinth) {
+                this.openModrinth();
+                if (this.modrinth != null) {
+                    this.modrinth.focus();
+                    this.updateTextInput();
+                }
             } else {
                 this.select(row.tab);
             }
@@ -911,6 +1002,9 @@ public final class SettingsScreen extends Screen {
         if (this.shelf != null && this.shelf.contains(mx, mouseY * this.g)) {
             return this.shelf.mouseScrolled(scrollY);
         }
+        if (this.modrinth != null && this.modrinth.contains(mx, mouseY * this.g)) {
+            return this.modrinth.mouseScrolled(scrollY);
+        }
         if (this.panel != null && this.panel.contains(mx, mouseY * this.g)) {
             return this.panel.mouseScrolled(scrollY);
         }
@@ -946,6 +1040,12 @@ public final class SettingsScreen extends Screen {
             this.updateTextInput();
             return true;
         }
+        if (this.modrinth != null && this.modrinth.isTyping()) {
+            // Typing a Modrinth search: Escape clears it or stops typing, Right Shift stays a key.
+            this.modrinth.keyPressed(event);
+            this.updateTextInput();
+            return true;
+        }
         if (event.isEscape()) {
             if (this.searchFocused && !this.query.isEmpty()) {
                 this.setQuery("");
@@ -971,16 +1071,27 @@ public final class SettingsScreen extends Screen {
         }
         if (key == InputConstants.KEY_UP || key == InputConstants.KEY_DOWN) {
             if (!this.childFocused || this.searchFocused) {
-                List<ModEntry> shown = this.rows.stream().map(Row::tab).filter(t -> t != null).toList();
+                // Get more and Browse Modrinth sit above the first tab.
+                List<Row> stops = this.rows.stream().filter(row -> row.header == null).toList();
                 boolean up = key == InputConstants.KEY_UP;
-                int at = this.shelf != null ? -1 : shown.indexOf(this.selected);
-                if (up && at <= 0 && this.rows.stream().anyMatch(Row::shelf)) {
-                    // Get more sits above the first tab.
-                    this.openShelf();
+                int at = -1;
+                for (int i = 0; i < stops.size(); i++) {
+                    Row row = stops.get(i);
+                    if (row.shelf ? this.shelf != null : row.modrinth ? this.modrinth != null : row.tab == this.selected) {
+                        at = i;
+                        break;
+                    }
+                }
+                if (!stops.isEmpty()) {
+                    Row next = stops.get(at < 0 ? 0 : Math.max(0, Math.min(stops.size() - 1, at + (up ? -1 : 1))));
+                    if (next.shelf) {
+                        this.openShelf();
+                    } else if (next.modrinth) {
+                        this.openModrinth();
+                    } else {
+                        this.select(next.tab);
+                    }
                     this.revealSelected();
-                } else if (!shown.isEmpty()) {
-                    int next = at < 0 ? 0 : Math.max(0, Math.min(shown.size() - 1, at + (up ? -1 : 1)));
-                    this.select(shown.get(next));
                 }
                 return true;
             }
@@ -1022,6 +1133,9 @@ public final class SettingsScreen extends Screen {
     @Override
     public boolean charTyped(CharacterEvent event) {
         if (this.panel != null && this.panel.charTyped(event)) {
+            return true;
+        }
+        if (this.modrinth != null && this.modrinth.charTyped(event)) {
             return true;
         }
         if (this.searchFocused) {

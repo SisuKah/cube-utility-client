@@ -5,6 +5,7 @@ mod auth;
 mod config;
 mod error;
 mod game;
+mod game_api;
 mod launcher;
 mod logs;
 mod modrinth;
