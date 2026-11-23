@@ -160,7 +160,8 @@ async fn start(app: &AppHandle) -> Result<(), String> {
         return Err("the installed Cube Utility Client mod can't start hidden".into());
     }
     match available_memory_gb() {
-        Some(free) if free < NEEDS_FREE_GB => return Err(format!("only {free:.1} GB of memory is free")),
+        // The same words each time, so the log says it once while memory stays short.
+        Some(free) if free < NEEDS_FREE_GB => return Err(format!("less than {NEEDS_FREE_GB:.0} GB of memory is free")),
         None => return Err("couldn't read the free memory".into()),
         Some(_) => {}
     }

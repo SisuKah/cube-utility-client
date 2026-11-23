@@ -18,15 +18,15 @@ import org.slf4j.Logger;
 /**
  * Ready in the background: the launcher starts Minecraft before the player presses PLAY, so PLAY
  * only has to show it. Until then the window is hidden, nothing makes a sound, and once loading
- * is done the title screen draws just a few frames a second. Only in a game the launcher started
- * that way ({@code -Dcubeutilityclient.background=true}); every other game is untouched.
+ * is done nothing is drawn at all. Only in a game the launcher started that way
+ * ({@code -Dcubeutilityclient.background=true}); every other game is untouched.
  */
 public final class BackgroundStart implements ClientModInitializer {
     private static final Logger LOGGER = LogUtils.getLogger();
     /** SDL_WINDOW_HIDDEN. */
     private static final long SDL_WINDOW_HIDDEN = 0x8L;
-    /** Frames a second while the loaded game waits, hidden. */
-    private static final int WAITING_FPS = 4;
+    /** How often the game loop runs while the loaded game waits, hidden (it draws nothing). */
+    public static final int WAITING_LOOPS_PER_SECOND = 4;
 
     private static volatile boolean shown = !LauncherLink.ENABLED;
     private static volatile long window;
@@ -71,14 +71,16 @@ public final class BackgroundStart implements ClientModInitializer {
         return !shown;
     }
 
-    /** Loaded and still hidden: a few frames a second are plenty. */
-    public static int waitingFramerate(int framerate) {
+    /**
+     * Loaded and still hidden: nothing needs drawing. While loading, frames go on, since the
+     * loading screen finishes the load from its own drawing.
+     */
+    public static boolean waitingHidden() {
         if (shown) {
-            return framerate;
+            return false;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        boolean loading = minecraft == null || minecraft.gui == null || minecraft.gui.overlay() != null;
-        return loading ? framerate : Math.min(framerate, WAITING_FPS);
+        return minecraft != null && minecraft.gui != null && minecraft.gui.overlay() == null;
     }
 
     /** PLAY: the window comes up in front, at full speed and with sound (render thread). */
