@@ -695,8 +695,9 @@ async fn install(app: &AppHandle, plan: &GamePlan, missing: Vec<Download>) -> Re
 
 /// Straight to the title screen: Minecraft's welcome screen is marked as done, and on the first
 /// launch the player's settings come over from the Minecraft they already play. Keys for mods a
-/// pack update brought get the pack's binding once. A problem here never stops the game from
-/// starting.
+/// pack update brought get the pack's binding once, and so do the settings the pack decides, in
+/// options.txt and in mods' config files (no lower frame rate while idle). A problem here never
+/// stops the game from starting.
 async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
     let paths = launcher.paths.clone();
     let (appdata, home) = (app.path().data_dir().ok(), app.path().home_dir().ok());
@@ -706,10 +707,12 @@ async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
             _ => Vec::new(),
         };
         let prepared = game::options::prepare(&paths, &others);
-        (prepared, game::options::give_pack_keys(&paths))
+        let keys = game::options::give_pack_keys(&paths);
+        let settings = [game::options::give_pack_settings(&paths), game::mod_configs::give_pack_settings(&paths)];
+        (prepared, keys, settings)
     })
     .await;
-    let Ok((prepared, keys)) = prepared else {
+    let Ok((prepared, keys, settings)) = prepared else {
         tracing::warn!("couldn't prepare options.txt");
         return;
     };
@@ -724,6 +727,13 @@ async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
         Ok(keys) if !keys.is_empty() => tracing::info!("gave the player the pack's keys for {}", keys.join(", ")),
         Ok(_) => {}
         Err(error) => tracing::warn!("couldn't give the player the pack's keys ({error})"),
+    }
+    for result in settings {
+        match result {
+            Ok(settings) if !settings.is_empty() => tracing::info!("set the pack's choice for {}", settings.join(", ")),
+            Ok(_) => {}
+            Err(error) => tracing::warn!("couldn't set the settings the pack decides ({error})"),
+        }
     }
 }
 

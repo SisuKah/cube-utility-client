@@ -4,7 +4,8 @@
 //! they already play: keybinds, video, sound and language. The pack's own defaults (the pack
 //! owner's settings, in config/cubeutilityclient/default-options.txt) fill in the rest, like
 //! the keys for the pack's mods, or everything for a player with no other Minecraft. Keys that
-//! arrive later, with a mod a pack update brings, are handed out once by `give_pack_keys`.
+//! arrive later, with a mod a pack update brings, are handed out once by `give_pack_keys`. A few
+//! settings are the pack's call even when a player's own settings come over (`PACK_DECIDES`).
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -28,6 +29,16 @@ const KEYS_GIVEN: &str = "pack-keys-given.txt";
 
 /// How options.txt writes a key with nothing on it.
 const UNBOUND: &str = "key.keyboard.unknown";
+
+/// Settings the pack decides, even for players whose own settings came over. Minecraft's
+/// Inactivity FPS Limit starts on "afk", which drops the game to 30 frames a second after a
+/// minute without input and to 10 after ten; the pack keeps it on "minimized", so the client
+/// never slows down while someone is idle.
+const PACK_DECIDES: &[&str] = &["inactivityFpsLimit"];
+
+/// The `PACK_DECIDES` settings this player has been given, one per line (in the launcher's
+/// state folder). Each is set only once, so a player who changes it afterwards keeps theirs.
+const SETTINGS_GIVEN: &str = "pack-settings-given.txt";
 
 /// options.txt as ordered `key:value` lines. Values can hold colons too (`lastServer`), so a
 /// line splits at its first one, the way Minecraft reads it.
@@ -190,7 +201,7 @@ pub fn prepare(paths: &Paths, others: &[Found]) -> std::io::Result<Prepared> {
     let result = match (theirs, defaults) {
         (Some((mut parsed, label)), defaults) => {
             for (key, value) in defaults.iter().flat_map(|d| d.lines.iter()) {
-                if parsed.get(key).is_none() {
+                if parsed.get(key).is_none() || PACK_DECIDES.contains(&key.as_str()) {
                     parsed.set(key, value);
                 }
             }
@@ -228,13 +239,7 @@ pub fn give_pack_keys(paths: &Paths) -> std::io::Result<Vec<String>> {
         return Ok(Vec::new());
     };
     let record = paths.state().join(KEYS_GIVEN);
-    let mut given: BTreeSet<String> = std::fs::read_to_string(&record)
-        .unwrap_or_default()
-        .lines()
-        .map(str::trim)
-        .filter(|key| !key.is_empty())
-        .map(str::to_string)
-        .collect();
+    let mut given = read_record(&record);
     let before = given.len();
     let mut bound = Vec::new();
     for (key, input) in defaults.lines.iter().filter(|(key, input)| key.starts_with("key_") && input != UNBOUND) {
@@ -260,10 +265,56 @@ pub fn give_pack_keys(paths: &Paths) -> std::io::Result<Vec<String>> {
         write_atomic(&file, options.to_text().as_bytes())?;
     }
     if given.len() != before {
-        let text: String = given.iter().map(|key| format!("{key}\n")).collect();
-        write_atomic(&record, text.as_bytes())?;
+        write_record(&record, &given)?;
     }
     Ok(bound)
+}
+
+/// Sets each setting the pack decides once, for players whose settings came over before the
+/// pack decided it: they still have their other game's choice, usually Minecraft's default. A
+/// player who changes one afterwards keeps their choice. Returns the settings it changed.
+pub fn give_pack_settings(paths: &Paths) -> std::io::Result<Vec<String>> {
+    let file = paths.instance().join("options.txt");
+    let (Some(defaults), Some(mut options)) = (read_options(&paths.instance().join(PACK_DEFAULTS)), read_options(&file)) else {
+        return Ok(Vec::new());
+    };
+    let record = paths.state().join(SETTINGS_GIVEN);
+    let mut given = read_record(&record);
+    let before = given.len();
+    let mut changed = Vec::new();
+    for key in PACK_DECIDES {
+        let Some(value) = defaults.get(key) else { continue };
+        if !given.insert(key.to_string()) {
+            continue;
+        }
+        if options.get(key) != Some(value) {
+            options.set(key, value);
+            changed.push(key.to_string());
+        }
+    }
+    if !changed.is_empty() {
+        write_atomic(&file, options.to_text().as_bytes())?;
+    }
+    if given.len() != before {
+        write_record(&record, &given)?;
+    }
+    Ok(changed)
+}
+
+/// A record of what the pack has handed out: one setting name per line.
+pub(crate) fn read_record(path: &Path) -> BTreeSet<String> {
+    std::fs::read_to_string(path)
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+pub(crate) fn write_record(path: &Path, given: &BTreeSet<String>) -> std::io::Result<()> {
+    let text: String = given.iter().map(|key| format!("{key}\n")).collect();
+    write_atomic(path, text.as_bytes())
 }
 
 #[cfg(test)]
@@ -453,14 +504,50 @@ mod tests {
         assert_eq!(key(&paths, "key_key.cubeutility.freelook").as_deref(), Some("key.mouse.middle"));
     }
 
+    const IDLE_DEFAULTS: &str = "version:5023\ninactivityFpsLimit:\"minimized\"\nfov:1.0\n";
+
+    #[test]
+    fn the_pack_decides_the_inactivity_limit_even_when_settings_come_over() {
+        let dir = TempDir::new("pack-decides");
+        let paths = Paths::new(dir.0.join("data"));
+        write(&paths.instance().join(PACK_DEFAULTS), IDLE_DEFAULTS);
+        let theirs = dir.0.join("minecraft").join("options.txt");
+        write(&theirs, "version:5023\ninactivityFpsLimit:\"afk\"\nfov:0.5\n");
+
+        assert_eq!(prepare(&paths, &[found(theirs, "Minecraft Launcher")]).unwrap(), Prepared::Imported("Minecraft Launcher".to_string()));
+        assert_eq!(key(&paths, "inactivityFpsLimit").as_deref(), Some("\"minimized\""));
+        assert_eq!(key(&paths, "fov").as_deref(), Some("0.5"), "their other settings still win");
+        assert!(give_pack_settings(&paths).unwrap().is_empty(), "nothing left to set afterwards");
+    }
+
+    #[test]
+    fn settings_that_came_over_earlier_get_the_packs_inactivity_limit_once() {
+        let dir = TempDir::new("settings-once");
+        let paths = Paths::new(dir.0.join("data"));
+        write(&paths.instance().join(PACK_DEFAULTS), IDLE_DEFAULTS);
+        write(&paths.instance().join("options.txt"), "version:5023\ninactivityFpsLimit:\"afk\"\nfov:0.5\nonboardAccessibility:false\n");
+
+        assert_eq!(give_pack_settings(&paths).unwrap(), ["inactivityFpsLimit"]);
+        assert_eq!(key(&paths, "inactivityFpsLimit").as_deref(), Some("\"minimized\""));
+        assert_eq!(key(&paths, "fov").as_deref(), Some("0.5"));
+
+        // Picking AFK again in Video Settings is their choice now.
+        write(&paths.instance().join("options.txt"), "version:5023\ninactivityFpsLimit:\"afk\"\n");
+        assert!(give_pack_settings(&paths).unwrap().is_empty());
+        assert_eq!(key(&paths, "inactivityFpsLimit").as_deref(), Some("\"afk\""));
+    }
+
     #[test]
     fn without_the_packs_defaults_or_a_played_game_nothing_changes() {
         let dir = TempDir::new("keys-none");
         let paths = Paths::new(dir.0.join("data"));
         assert!(give_pack_keys(&paths).unwrap().is_empty());
+        assert!(give_pack_settings(&paths).unwrap().is_empty());
         write(&paths.instance().join("options.txt"), "version:5023\n");
         assert!(give_pack_keys(&paths).unwrap().is_empty());
+        assert!(give_pack_settings(&paths).unwrap().is_empty());
         assert!(!paths.state().join(KEYS_GIVEN).exists());
+        assert!(!paths.state().join(SETTINGS_GIVEN).exists());
     }
 
     #[test]

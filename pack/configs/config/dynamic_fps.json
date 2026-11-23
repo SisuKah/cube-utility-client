@@ -1,4 +1,7 @@
 {
+    "idle": {
+        "timeout": 0
+    },
     "states": {
         "hovered": {
             "frame_rate_target": -1

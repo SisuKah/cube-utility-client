@@ -3,6 +3,11 @@
 Patch notes, newest first. The newest section is what players see as "What's new" after the
 next release. `npm run pack:add` adds a section for you.
 
+## Full frame rate, even when you're idle
+
+- Minecraft no longer drops to 10 frames a second when you leave it alone for five minutes: Dynamic FPS's Idle Timeout is now Disabled.
+- It keeps its full frame rate behind other windows too, and Minecraft's own Inactivity FPS Limit is on Minimized, so it never slows down while you're away from the keyboard.
+
 ## Cube Utility 1.8.0, one settings page, Get more and 16 more mods
 
 - New: **Get more**, at the top of the settings page. Keystrokes, TNT timer, Sprint status, Effect timers, Faster inventory, Food info and a tidier F3 screen are already installed: press Get and one is on straight away, with no download and no restart, and gets its own tab with its settings. Remove puts it away again.
