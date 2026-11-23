@@ -44,7 +44,6 @@ export class CharacterViewer {
   private cssHeight = 0
   private frame = 0
   private lastFrame = 0
-  private lastDraw = 0
   private emote: Emote | null = null
   private emoteStart = 0
   private nextCue = 0
@@ -184,9 +183,8 @@ export class CharacterViewer {
     this.lastFrame = now
 
     if (!this.emote && !this.held && now >= this.nextEmoteAt) this.begin(this.pick(), now)
-    // Standing still only needs about 30 frames a second.
-    if (!this.emote && ms - this.lastDraw < 30) return
-    this.lastDraw = ms
+    // Every display frame, standing still too: at half rate the idle arm sway looked choppy.
+    // The loop stops while the window is hidden, which it is while the game runs.
     this.draw(now)
 
     if (this.emote) {
