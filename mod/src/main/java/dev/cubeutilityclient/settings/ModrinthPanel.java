@@ -339,8 +339,9 @@ final class ModrinthPanel {
         }
         this.extractField(paint, k);
         if (this.link == null) {
-            this.extractMessage(paint, "Browse Modrinth works when Minecraft is started from the Cube Utility Client launcher.",
-                    "Add mods in the launcher's Mods screen, or start the game from the launcher.", k);
+            // Started another way, or by a launcher from before Browse Modrinth (it updates itself).
+            this.extractMessage(paint, "Browse Modrinth needs the game started from the newest Cube Utility Client launcher.",
+                    "Until then, add mods in the launcher's Mods screen.", k);
             return;
         }
         this.extractStatus(paint, k);
