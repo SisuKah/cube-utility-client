@@ -7,13 +7,15 @@ export interface Settings {
   hideWhilePlaying: boolean
   betaUpdates: boolean
   launchTarget: LaunchTarget
+  /** Minecraft loads, hidden, while the launcher is open, so PLAY just shows it. */
+  backgroundStart: boolean
 }
 
 // Older versions kept settings in browser storage. The app now keeps them on the Rust side
 // (state/settings.json), so PLAY can read them; the browser preview still uses this key.
 const STORAGE_KEY = 'cuc.settings.v1'
 
-const DEFAULTS: Settings = { memoryGb: 4, hideWhilePlaying: true, betaUpdates: false, launchTarget: 'cubecraft' }
+const DEFAULTS: Settings = { memoryGb: 4, hideWhilePlaying: true, betaUpdates: false, launchTarget: 'cubecraft', backgroundStart: true }
 
 function loadStored(): Partial<Settings> | null {
   try {
@@ -43,7 +45,13 @@ function forgetStored() {
 }
 
 function fromView(view: SettingsView): Settings {
-  return { memoryGb: view.memoryGb, hideWhilePlaying: view.hideWhilePlaying, betaUpdates: view.betaUpdates, launchTarget: view.launchTarget }
+  return {
+    memoryGb: view.memoryGb,
+    hideWhilePlaying: view.hideWhilePlaying,
+    betaUpdates: view.betaUpdates,
+    launchTarget: view.launchTarget,
+    backgroundStart: view.backgroundStart
+  }
 }
 
 export function useSettings() {

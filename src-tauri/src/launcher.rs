@@ -23,6 +23,8 @@ use crate::paths::Paths;
 use crate::settings::SettingsStore;
 use crate::sync::{PackSync, Report};
 
+pub mod background;
+
 const STATE_EVENT: &str = "launcher://state";
 const PACK_EVENT: &str = "pack://info";
 /// The log line that means the game has finished loading to the title screen.
@@ -192,6 +194,9 @@ impl Launcher {
             }
             pack.extra_mods.sort();
         });
+        // A game waiting in the background was started without these changes.
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move { background::stop(&app, "mods were added or removed").await });
     }
 
     fn set(&self, app: &AppHandle, phase: Phase) {
@@ -312,6 +317,10 @@ async fn refresh(app: &AppHandle, startup: bool) {
                 launcher.set(app, phase);
             }
         }
+        // Ready to play (and the lock is free again): the game can start in the background.
+        if matches!(launcher.current(), Phase::Ready) {
+            background::nudge(app);
+        }
         // A switch flipped while that sync ran, so its own sync couldn't start: go again.
         if !launcher.resync.load(Ordering::SeqCst) {
             return;
@@ -389,6 +398,8 @@ async fn sync_pack(app: &AppHandle, launcher: &Launcher, repair: bool) -> Result
         }
     }
     if prepared.has_changes() {
+        // A game waiting in the background has the old mods open: it goes first.
+        background::stop(app, "the mods are changing").await;
         launcher.set(app, Phase::Syncing { done_bytes: 0, total_bytes: 0, current: "Applying the update".into() });
     }
     let mut report = launcher.sync.finish(prepared).await?;
@@ -401,6 +412,10 @@ async fn sync_pack(app: &AppHandle, launcher: &Launcher, repair: bool) -> Result
         }
     }
     launcher.take_report(app, &report, problem);
+    // CubeCraft's resource pack, so the game starts with it (see game::server_packs).
+    if let Some(manifest) = launcher.installed_manifest() {
+        game::server_packs::fetch(&launcher.net, &launcher.paths, &manifest.server_packs).await;
+    }
     Ok(report.changed)
 }
 
@@ -534,6 +549,7 @@ fn start_play(app: AppHandle, target: Option<launch::LaunchTarget>) -> Result<()
         target: target.unwrap_or(settings.launch_target),
         memory_gb: settings.memory_gb,
         hide_while_playing: settings.hide_while_playing,
+        background: false,
     };
     tauri::async_runtime::spawn(async move {
         let launcher = app.state::<Launcher>();
@@ -563,6 +579,8 @@ fn start_play(app: AppHandle, target: Option<launch::LaunchTarget>) -> Result<()
         launcher.requested.store(false, Ordering::SeqCst);
         if finished {
             catch_up(&app).await;
+            // Ready for the next PLAY.
+            background::nudge(&app);
         }
     });
     Ok(())
@@ -578,6 +596,10 @@ async fn run(app: &AppHandle, launcher: &Launcher, options: launch::LaunchOption
     let missing = plan.missing();
     if !missing.is_empty() {
         install(app, &plan, missing).await?;
+    }
+    // A game that started in the background for this player: PLAY just shows it.
+    if let Some(waiting) = background::claim(app, &account, options.memory_gb).await {
+        return background::play(app, launcher, waiting, &options).await;
     }
     start_game(app, launcher, &plan, &account, options).await
 }
@@ -610,6 +632,8 @@ pub fn repair(app: AppHandle) -> Result<()> {
     tauri::async_runtime::spawn(async move {
         let launcher = app.state::<Launcher>();
         let work = launcher.work.lock().await;
+        // A game waiting in the background holds the files Repair may replace.
+        background::stop(&app, "repairing files").await;
         let result = repair_files(&app, &launcher).await;
         let finished = result.is_ok();
         let phase = match result {
@@ -696,10 +720,11 @@ async fn install(app: &AppHandle, plan: &GamePlan, missing: Vec<Download>) -> Re
 /// Straight to the title screen: Minecraft's welcome screen is marked as done, and on the first
 /// launch the player's settings come over from the Minecraft they already play. Keys for mods a
 /// pack update brought get the pack's binding once, and so do the settings the pack decides, in
-/// options.txt and in mods' config files (no lower frame rate while idle). A problem here never
-/// stops the game from starting.
+/// options.txt and in mods' config files (no lower frame rate while idle), and CubeCraft's
+/// resource pack. A problem here never stops the game from starting.
 async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
     let paths = launcher.paths.clone();
+    let server_packs = launcher.installed_manifest().map(|m| m.server_packs.clone()).unwrap_or_default();
     let (appdata, home) = (app.path().data_dir().ok(), app.path().home_dir().ok());
     let prepared = tokio::task::spawn_blocking(move || {
         let others = match (appdata, home) {
@@ -709,13 +734,18 @@ async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
         let prepared = game::options::prepare(&paths, &others);
         let keys = game::options::give_pack_keys(&paths);
         let settings = [game::options::give_pack_settings(&paths), game::mod_configs::give_pack_settings(&paths)];
-        (prepared, keys, settings)
+        (prepared, keys, settings, game::server_packs::switch_on(&paths, &server_packs))
     })
     .await;
-    let Ok((prepared, keys, settings)) = prepared else {
+    let Ok((prepared, keys, settings, packs)) = prepared else {
         tracing::warn!("couldn't prepare options.txt");
         return;
     };
+    match packs {
+        Ok(packs) if !packs.is_empty() => tracing::info!("switched on {} so the game starts with it", packs.join(", ")),
+        Ok(_) => {}
+        Err(error) => tracing::warn!("couldn't switch on the server resource packs ({error})"),
+    }
     match prepared {
         Ok(game::options::Prepared::Imported(from)) => tracing::info!("brought the player's Minecraft settings over from {from}"),
         Ok(game::options::Prepared::PackDefaults) => tracing::info!("started options.txt from the pack's default settings"),
@@ -740,6 +770,27 @@ async fn prepare_options(app: &AppHandle, launcher: &Launcher) {
 /// Starts the game and waits until it exits. Ok when it closed normally.
 async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, account: &launch::Account, options: launch::LaunchOptions) -> Result<()> {
     launcher.set(app, Phase::Launching);
+    let game = spawn_game(app, launcher, plan, account, &options).await?;
+    launcher.playing.store(true, Ordering::SeqCst);
+    watch_game(app, launcher, game, &options, false).await
+}
+
+/// A started Minecraft, with what's needed to follow it until it exits.
+struct GameProcess {
+    child: tokio::process::Child,
+    /// A game started in the background takes the launcher's commands here (background.rs).
+    stdin: Option<tokio::process::ChildStdin>,
+    signals: tokio::sync::mpsc::Receiver<GameSignal>,
+    /// The settings page in the game browses Modrinth and adds mods through the launcher.
+    game_api: Option<crate::game_api::GameApi>,
+    launched_at: SystemTime,
+    log_path: PathBuf,
+    game_dir: PathBuf,
+}
+
+/// Starts Java with the game. With `options.background` it starts hidden, at low priority, and
+/// keeps its input open for the launcher (background.rs).
+async fn spawn_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, account: &launch::Account, options: &launch::LaunchOptions) -> Result<GameProcess> {
     for sub in ["java", "jna", "lwjgl", "netty"] {
         tokio::fs::create_dir_all(plan.natives_dir.join(sub)).await?;
     }
@@ -747,30 +798,31 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
     prepare_options(app, launcher).await;
 
     let version = app.package_info().version.to_string();
-    let command = launch::build(plan, &launcher.paths, account, &options, &version);
-    tracing::info!("starting {} {}", command.java.display(), launch::describe(&command.args));
-
-    let mut process = tokio::process::Command::new(&command.java);
-    process
-        .args(&command.args)
-        .current_dir(&command.game_dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    #[cfg(windows)]
-    process.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-    // The settings page in the game browses Modrinth and adds mods through the launcher, and the
-    // title screen's Accounts switches account without closing the game.
-    let game_api = crate::game_api::GameApi::open(app, &launcher.paths).await;
-    let mut child = process.spawn().map_err(|e| Error::Message(format!("couldn't start Java: {e}")))?;
-    launcher.playing.store(true, Ordering::SeqCst);
-    let launched_at = SystemTime::now();
+    let command = launch::build(plan, &launcher.paths, account, options, &version);
+    let how = if options.background { "in the background: " } else { "" };
+    tracing::info!("starting {how}{} {}", command.java.display(), launch::describe(&command.args));
 
     // The game's output goes to logs/game.log. READY_LINE means it's up; FAILED_LINES mean
     // Fabric refused the mods and is showing its own error window.
     let log_path = launcher.paths.logs().join("game.log");
     let log = Arc::new(tokio::sync::Mutex::new(tokio::fs::File::create(&log_path).await?));
-    let (signal_tx, mut signals) = tokio::sync::mpsc::channel::<GameSignal>(4);
+
+    let mut process = tokio::process::Command::new(&command.java);
+    process
+        .args(&command.args)
+        .current_dir(&command.game_dir)
+        .stdin(if options.background { Stdio::piped() } else { Stdio::null() })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    process.creation_flags(0x0800_0000 | if options.background { background::BELOW_NORMAL_PRIORITY_CLASS } else { 0 }); // CREATE_NO_WINDOW
+    // The settings page in the game browses Modrinth and adds mods through the launcher, and the
+    // title screen's Accounts switches account without closing the game.
+    let game_api = crate::game_api::GameApi::open(app, &launcher.paths).await;
+    let mut child = process.spawn().map_err(|e| Error::Message(format!("couldn't start Java: {e}")))?;
+    let launched_at = SystemTime::now();
+
+    let (signal_tx, signals) = tokio::sync::mpsc::channel::<GameSignal>(4);
     if let Some(stdout) = child.stdout.take() {
         tauri::async_runtime::spawn(pipe_output(stdout, log.clone(), signal_tx.clone()));
     }
@@ -778,17 +830,27 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
         tauri::async_runtime::spawn(pipe_output(stderr, log.clone(), signal_tx.clone()));
     }
     drop(signal_tx);
+    let stdin = child.stdin.take();
+    Ok(GameProcess { child, stdin, signals, game_api, launched_at, log_path, game_dir: command.game_dir })
+}
 
+/// Follows a started game until it exits: "in game" once it's up (right away when `up`), then
+/// the exit. Ok when it closed normally.
+async fn watch_game(app: &AppHandle, launcher: &Launcher, mut game: GameProcess, options: &launch::LaunchOptions, up: bool) -> Result<()> {
     let mut playing = false;
     let mut hidden = false;
+    if up {
+        playing = true;
+        hidden = mark_playing(app, launcher, options);
+    }
     let mut refused: Option<String> = None;
     let status = loop {
         tokio::select! {
-            status = child.wait() => break status?,
-            Some(signal) = signals.recv() => match signal {
+            status = game.child.wait() => break status?,
+            Some(signal) = game.signals.recv() => match signal {
                 GameSignal::Ready if !playing && refused.is_none() => {
                     playing = true;
-                    hidden = mark_playing(app, launcher, &options);
+                    hidden = mark_playing(app, launcher, options);
                 }
                 GameSignal::Refused(line) => {
                     tracing::warn!("Fabric refused the mods: {line}");
@@ -799,11 +861,11 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
             // Some setups never print READY_LINE; after a while, assume the game is up.
             _ = tokio::time::sleep(Duration::from_secs(45)), if !playing && refused.is_none() => {
                 playing = true;
-                hidden = mark_playing(app, launcher, &options);
+                hidden = mark_playing(app, launcher, options);
             }
         }
     };
-    if let Some(api) = game_api {
+    if let Some(api) = game.game_api.take() {
         api.close(app).await;
     }
     if hidden {
@@ -819,8 +881,8 @@ async fn start_game(app: &AppHandle, launcher: &Launcher, plan: &GamePlan, accou
         Some(_) => "Fabric couldn't load the mods, so Minecraft didn't start. Repair files fixes damaged mods.".to_string(),
         None => format!("Minecraft closed with an error (exit code {code})."),
     };
-    message.push_str(&format!(" The game log is in {}.", log_path.display()));
-    if let Some(report) = new_crash_report(&command.game_dir, launched_at) {
+    message.push_str(&format!(" The game log is in {}.", game.log_path.display()));
+    if let Some(report) = new_crash_report(&game.game_dir, game.launched_at) {
         message.push_str(&format!(" Crash report: {}.", report.display()));
     }
     Err(Error::Crashed(message))

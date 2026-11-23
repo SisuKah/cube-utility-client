@@ -71,6 +71,7 @@ pub(crate) mod tests {
             notes: None,
             files,
             configs: vec![],
+            server_packs: vec![],
         }
     }
 

@@ -8,6 +8,7 @@ pub mod launch;
 pub mod mod_configs;
 pub mod options;
 pub mod rules;
+pub mod server_packs;
 pub mod version;
 
 pub use install::{resolve, GamePlan};

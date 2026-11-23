@@ -27,7 +27,13 @@ pub struct LaunchOptions {
     pub target: LaunchTarget,
     pub memory_gb: u32,
     pub hide_while_playing: bool,
+    /// Started ahead of PLAY: hidden until the launcher says so (see crate::background). It
+    /// never joins a server by itself; PLAY tells it where to go.
+    pub background: bool,
 }
+
+/// The Java property that tells the Cube Utility Client mod it was started in the background.
+pub const BACKGROUND_PROPERTY: &str = "-Dcubeutilityclient.background=true";
 
 /// Who is playing: the account from Microsoft sign-in (see `auth`).
 #[derive(Debug, Clone)]
@@ -62,7 +68,7 @@ pub struct GameCommand {
 
 pub fn build(plan: &GamePlan, paths: &Paths, account: &Account, options: &LaunchOptions, launcher_version: &str) -> GameCommand {
     let platform = Platform::current();
-    let features = Features { quick_play_multiplayer: options.target == LaunchTarget::Cubecraft };
+    let features = Features { quick_play_multiplayer: options.target == LaunchTarget::Cubecraft && !options.background };
     let separator = if cfg!(windows) { ";" } else { ":" };
     // Each jar by its real location. Fabric compares this list with the paths Java resolves, and
     // loads its own classes twice (then crashes) when a junction or Windows' folder redirection
@@ -96,6 +102,9 @@ pub fn build(plan: &GamePlan, paths: &Paths, account: &Account, options: &Launch
     let memory = options.memory_gb.clamp(2, 16);
     let mut args = vec![format!("-Xmx{memory}G"), format!("-Xms{}G", memory.min(2))];
     args.extend(args::expand(&plan.version.arguments.jvm, &platform, &features, &vars));
+    if options.background {
+        args.push(BACKGROUND_PROPERTY.to_string());
+    }
     args.push(plan.version.main_class.clone());
     args.extend(args::expand(&plan.version.arguments.game, &platform, &features, &vars));
     GameCommand { java: plan.java.clone(), args, game_dir }
@@ -159,7 +168,7 @@ mod tests {
     }
 
     fn options(target: LaunchTarget) -> LaunchOptions {
-        LaunchOptions { target, memory_gb: 6, hide_while_playing: true }
+        LaunchOptions { target, memory_gb: 6, hide_while_playing: true, background: false }
     }
 
     #[test]
@@ -199,6 +208,19 @@ mod tests {
         let cmd = build(&plan(), &paths, &account(), &options(LaunchTarget::Cubecraft), "1.0.0");
         let quick = cmd.args.iter().position(|a| a == "--quickPlayMultiplayer").unwrap();
         assert_eq!(cmd.args[quick + 1], "play.cubecraft.net");
+    }
+
+    #[test]
+    fn a_background_start_waits_hidden_instead_of_joining() {
+        let paths = Paths::new(PathBuf::from("C:/data"));
+        let mut opts = options(LaunchTarget::Cubecraft);
+        opts.background = true;
+        let cmd = build(&plan(), &paths, &account(), &opts, "1.0.0");
+        assert!(!cmd.args.iter().any(|a| a == "--quickPlayMultiplayer"), "PLAY says where to go");
+        let property = cmd.args.iter().position(|a| a == BACKGROUND_PROPERTY).unwrap();
+        let main = cmd.args.iter().position(|a| a == "net.fabricmc.loader.impl.launch.knot.KnotClient").unwrap();
+        assert!(property < main, "a Java property goes before the main class");
+        assert!(!build(&plan(), &paths, &account(), &options(LaunchTarget::Title), "1.0.0").args.iter().any(|a| a == BACKGROUND_PROPERTY));
     }
 
     #[test]

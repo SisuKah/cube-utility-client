@@ -48,10 +48,50 @@ pub struct Manifest {
     pub files: Vec<ManifestFile>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub configs: Vec<ConfigFile>,
+    /// Servers' resource packs, put in the game's download cache ahead of time. Launchers older
+    /// than 1.2 don't know this field and skip it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub server_packs: Vec<ServerPack>,
 }
 
 fn yes() -> bool {
     true
+}
+
+/// A server's resource pack (CubeCraft's), downloaded ahead of time to where Minecraft keeps the
+/// packs servers send: `downloads/<id>/<sha1>` in the game folder. When the server sends that
+/// pack, Minecraft finds it already there, and the game starts with it switched on, so joining
+/// doesn't stop to download and load it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServerPack {
+    /// The server that sends it, like play.cubecraft.net. Only for people reading the manifest.
+    pub server: String,
+    /// The pack's UUID, as the server sends it.
+    pub id: String,
+    pub url: String,
+    /// Minecraft names the downloaded file after its SHA-1.
+    pub sha1: String,
+    pub size: u64,
+}
+
+impl ServerPack {
+    /// Where the pack goes, relative to the game folder.
+    pub fn path(&self) -> String {
+        format!("downloads/{}/{}", self.id, self.sha1)
+    }
+}
+
+/// A UUID in its usual text form, the way Minecraft names a download folder.
+fn is_uuid(text: &str) -> bool {
+    text.len() == 36
+        && text.char_indices().all(|(i, c)| match i {
+            8 | 13 | 18 | 23 => c == '-',
+            _ => c.is_ascii_hexdigit() && !c.is_ascii_uppercase(),
+        })
+}
+
+fn is_sha1(text: &str) -> bool {
+    text.len() == 40 && text.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -184,6 +224,18 @@ impl Manifest {
                 return invalid(format!("unsafe config path '{}'", config.path));
             }
             check_file(&config.url, &config.sha512, config.size, &config.path)?;
+        }
+        let mut pack_ids = HashSet::new();
+        for pack in &self.server_packs {
+            if !is_uuid(&pack.id) || !pack_ids.insert(pack.id.as_str()) {
+                return invalid(format!("server pack for '{}' has a duplicate or invalid id '{}'", pack.server, pack.id));
+            }
+            if !is_sha1(&pack.sha1) {
+                return invalid(format!("server pack for '{}' has an invalid SHA-1 hash", pack.server));
+            }
+            if !(pack.url.starts_with("https://") || pack.url.starts_with("http://")) || pack.size == 0 {
+                return invalid(format!("server pack for '{}' has an invalid download address or size", pack.server));
+            }
         }
         Ok(())
     }
@@ -320,6 +372,13 @@ mod tests {
                 },
             ],
             configs: vec![],
+            server_packs: vec![ServerPack {
+                server: "play.cubecraft.net".into(),
+                id: "c05f8844-0b30-39f9-b032-ac20410d2575".into(),
+                url: "https://files.cubecraftcdn.com/assets/cubecraft/pack.zip".into(),
+                sha1: "de57854a9220e95cdbf04515d431b23f1849617b".into(),
+                size: 3_494_564,
+            }],
         }
     }
 
@@ -331,6 +390,41 @@ mod tests {
         // The JSON uses the camelCase names from the spec.
         let text = String::from_utf8(bytes).unwrap();
         assert!(text.contains("\"packVersion\"") && text.contains("\"requiredBy\"") && text.contains("\"type\": \"fabric\""));
+        assert!(text.contains("\"serverPacks\""));
+        assert_eq!(manifest.server_packs[0].path(), "downloads/c05f8844-0b30-39f9-b032-ac20410d2575/de57854a9220e95cdbf04515d431b23f1849617b");
+    }
+
+    /// Launchers already out there read manifests from newer pack tools: fields they don't know
+    /// (like `serverPacks` for launcher 1.1) have to be skipped, not refused.
+    #[test]
+    fn skips_fields_it_does_not_know() {
+        let mut json: serde_json::Value = serde_json::from_slice(&sample().to_bytes().unwrap()).unwrap();
+        json["somethingNew"] = serde_json::json!({ "from": "a later pack tool" });
+        json["serverPacks"][0]["alsoNew"] = serde_json::json!(true);
+        let parsed = Manifest::parse(&serde_json::to_vec(&json).unwrap()).unwrap();
+        assert_eq!(parsed, sample());
+
+        let mut without: serde_json::Value = serde_json::from_slice(&sample().to_bytes().unwrap()).unwrap();
+        without.as_object_mut().unwrap().remove("serverPacks");
+        assert!(Manifest::parse(&serde_json::to_vec(&without).unwrap()).unwrap().server_packs.is_empty());
+    }
+
+    #[test]
+    fn refuses_broken_server_packs() {
+        for (id, sha1) in [
+            ("c05f8844-0b30-39f9-b032-ac20410d2575/../..", "de57854a9220e95cdbf04515d431b23f1849617b"),
+            ("C05F8844-0B30-39F9-B032-AC20410D2575", "de57854a9220e95cdbf04515d431b23f1849617b"),
+            ("c05f8844-0b30-39f9-b032-ac20410d2575", "de57854a9220e95cdbf04515d431b23f184961"),
+            ("c05f8844-0b30-39f9-b032-ac20410d2575", "../57854a9220e95cdbf04515d431b23f1849617b"),
+        ] {
+            let mut m = sample();
+            m.server_packs[0].id = id.into();
+            m.server_packs[0].sha1 = sha1.into();
+            assert!(m.validate().is_err(), "{id} {sha1}");
+        }
+        let mut m = sample();
+        m.server_packs.push(m.server_packs[0].clone());
+        assert!(m.validate().is_err(), "the same pack twice");
     }
 
     #[test]

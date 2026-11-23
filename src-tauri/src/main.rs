@@ -54,9 +54,11 @@ fn main() {
             app.manage(settings);
             app.manage(auth::Auth::new(paths.clone(), net.clone()));
             app.manage(launcher::Launcher::new(paths, net, version, beta));
+            app.manage(launcher::background::Background::default());
             tray::create(app)?;
             auth::start(app.handle().clone());
             launcher::start(app.handle().clone());
+            launcher::background::begin(app.handle().clone());
             update::start(app.handle().clone());
             Ok(())
         })
@@ -91,6 +93,7 @@ fn main() {
 
     app.run(|app, event| {
         if let tauri::RunEvent::Exit = event {
+            launcher::background::stop_on_exit(app);
             update::install_on_quit(app);
         }
     });

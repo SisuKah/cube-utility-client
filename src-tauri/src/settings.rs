@@ -18,11 +18,13 @@ pub struct Settings {
     pub hide_while_playing: bool,
     pub beta_updates: bool,
     pub launch_target: LaunchTarget,
+    /// Load Minecraft while the launcher is open, so PLAY just shows it (crate::background).
+    pub background_start: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { memory_gb: 4, hide_while_playing: true, beta_updates: false, launch_target: LaunchTarget::Cubecraft }
+        Self { memory_gb: 4, hide_while_playing: true, beta_updates: false, launch_target: LaunchTarget::Cubecraft, background_start: true }
     }
 }
 
@@ -53,6 +55,7 @@ pub struct SettingsChange {
     pub hide_while_playing: Option<bool>,
     pub beta_updates: Option<bool>,
     pub launch_target: Option<LaunchTarget>,
+    pub background_start: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -108,6 +111,9 @@ impl SettingsStore {
         if let Some(target) = change.launch_target {
             settings.launch_target = target;
         }
+        if let Some(background) = change.background_start {
+            settings.background_start = background;
+        }
         let bytes = serde_json::to_vec_pretty(&*settings).map_err(|e| Error::Message(e.to_string()))?;
         crate::sync::write_atomic(&self.file, &bytes)?;
         *self.fresh.lock().unwrap_or_else(|e| e.into_inner()) = false;
@@ -128,6 +134,10 @@ pub fn update_settings(app: AppHandle, change: SettingsChange) -> Result<Setting
     // Beta updates on or off: sync from the other channel now.
     if before.beta_updates != after.beta_updates {
         crate::launcher::sync_soon(&app);
+    }
+    // A game waiting in the background for other memory, or switched off: it goes (or comes).
+    if before.background_start != after.background_start || before.memory_gb != after.memory_gb {
+        crate::launcher::background::nudge(&app);
     }
     Ok(store.view())
 }
@@ -162,7 +172,7 @@ mod tests {
 
         let again = SettingsStore::load(&paths, limits);
         assert!(!again.view().fresh);
-        assert_eq!(again.get(), Settings { memory_gb: 8, hide_while_playing: true, beta_updates: true, launch_target: LaunchTarget::Title });
+        assert_eq!(again.get(), Settings { memory_gb: 8, hide_while_playing: true, beta_updates: true, launch_target: LaunchTarget::Title, background_start: true });
         let json = serde_json::to_value(again.view()).unwrap();
         assert_eq!(json["launchTarget"], "title");
         assert_eq!(json["memory"]["maxGb"], 8);

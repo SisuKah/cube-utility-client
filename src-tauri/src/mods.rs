@@ -198,6 +198,7 @@ mod tests {
                 file("fpsdisplay", Group::Qol, true, true, &[], "5.2.0+26.3"),
             ],
             configs: vec![],
+            server_packs: vec![],
         }
     }
 

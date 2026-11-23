@@ -44,6 +44,8 @@ const ALLOWED_HOSTS: &[&str] = &[
     "xsts.auth.xboxlive.com",
     "api.minecraftservices.com",
     "textures.minecraft.net",
+    // CubeCraft's resource pack, downloaded ahead of joining (the manifest's serverPacks)
+    "files.cubecraftcdn.com",
 ];
 
 /// How long a sign-in or other API request may take.

@@ -164,3 +164,16 @@ policy = "if-missing"
 file = "configs/config/resourcepackchecker/resourcepackchecker.properties"
 path = "config/resourcepackchecker/resourcepackchecker.properties"
 policy = "if-missing"
+
+# CubeCraft's resource pack, downloaded ahead of time to where Minecraft keeps server packs and
+# switched on before the game starts (by launchers from 1.2), so joining CubeCraft doesn't stop
+# for about 25 seconds to download and load it. Server Resource Pack Checker above is what lists
+# it as a pack. When CubeCraft changes its pack, `pack build` warns and leaves this out; join
+# once, then copy the new id, url, file hash (sha1) and size from the newest
+# files.cubecraftcdn.com entry in instance/downloads/log.json.
+[[serverPacks]]
+server = "play.cubecraft.net"
+id = "c05f8844-0b30-39f9-b032-ac20410d2575"
+url = "https://files.cubecraftcdn.com/assets/cubecraft/_7_jaTQ9liVpeGnwgfciaKC5HrYuSni3kdZeyH4DGLMtYerFRiCSRUcOONwzf3TyOxlMBw9LCeOFgmLAh6zEKA==.zip"
+sha1 = "de57854a9220e95cdbf04515d431b23f1849617b"
+size = 3494564

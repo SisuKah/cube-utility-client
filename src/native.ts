@@ -36,12 +36,14 @@ export interface SettingsView {
   hideWhilePlaying: boolean
   betaUpdates: boolean
   launchTarget: LaunchTarget
+  /** Minecraft loads, hidden, while the launcher is open (src-tauri/src/launcher/background.rs). */
+  backgroundStart: boolean
   memory: { totalGb: number; maxGb: number; defaultGb: number }
   /** Nothing was saved yet. */
   fresh: boolean
 }
 
-export type SettingsChange = Partial<Pick<SettingsView, 'memoryGb' | 'hideWhilePlaying' | 'betaUpdates' | 'launchTarget'>>
+export type SettingsChange = Partial<Pick<SettingsView, 'memoryGb' | 'hideWhilePlaying' | 'betaUpdates' | 'launchTarget' | 'backgroundStart'>>
 
 export const settingsStore = {
   get: () => invoke<SettingsView>('get_settings'),

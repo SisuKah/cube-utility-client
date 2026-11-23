@@ -22,6 +22,8 @@ pub struct PackFile {
     pub mods: Vec<ModEntry>,
     #[serde(default)]
     pub configs: Vec<ConfigEntry>,
+    #[serde(default)]
+    pub server_packs: Vec<ServerPackEntry>,
 }
 
 fn yes() -> bool {
@@ -104,6 +106,17 @@ pub struct ConfigEntry {
     pub policy: ConfigPolicy,
 }
 
+/// A server's resource pack, as Minecraft logs it in instance/downloads/log.json after joining.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ServerPackEntry {
+    pub server: String,
+    pub id: String,
+    pub url: String,
+    pub sha1: String,
+    pub size: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,9 +140,18 @@ mod tests {
             [[configs]]
             file = "configs/sodium-options.json"
             path = "config/sodium-options.json"
+
+            [[serverPacks]]
+            server = "play.cubecraft.net"
+            id = "c05f8844-0b30-39f9-b032-ac20410d2575"
+            url = "https://files.cubecraftcdn.com/assets/cubecraft/pack.zip"
+            sha1 = "de57854a9220e95cdbf04515d431b23f1849617b"
+            size = 3494564
             "#,
         )
         .unwrap();
+        assert_eq!(pack.server_packs.len(), 1);
+        assert_eq!(pack.server_packs[0].size, 3_494_564);
         assert_eq!(pack.mods.len(), 2);
         assert!(pack.allow_extra_mods);
         assert_eq!(pack.quick_play.as_deref(), Some("play.cubecraft.net"));

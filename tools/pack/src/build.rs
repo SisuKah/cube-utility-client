@@ -13,7 +13,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use cuc_manifest::{ConfigFile, Group, JavaRequirement, Loader, Manifest, ManifestFile, ModrinthRef, Notes, SCHEMA};
+use cuc_manifest::{ConfigFile, Group, JavaRequirement, Loader, Manifest, ManifestFile, ModrinthRef, Notes, ServerPack, SCHEMA};
+use sha1::Sha1;
 use sha2::{Digest, Sha512};
 
 use crate::jar::{self, ModInfo};
@@ -154,6 +155,7 @@ pub fn run(root: &Path, args: &Args) -> Result<()> {
     let mut uploads = Vec::new();
     let files = builder.manifest_files(&files_url, &mut uploads);
     let configs = builder.config_files(&files_url, &mut uploads)?;
+    let server_packs = builder.server_packs();
     let mut assets = BTreeSet::new();
     if let Some((asset, _)) = uploads.iter().find(|(asset, _)| !assets.insert(asset.to_ascii_lowercase())) {
         return Err(format!("two files would be uploaded as '{asset}'; rename one of them").into());
@@ -174,6 +176,7 @@ pub fn run(root: &Path, args: &Args) -> Result<()> {
         notes: None,
         files,
         configs,
+        server_packs,
     };
     manifest.validate()?;
 
@@ -707,6 +710,51 @@ impl<'a> Builder<'a> {
         }
         Ok(configs)
     }
+
+    /// The servers' resource packs, each checked against a download from the server's own
+    /// address. One that doesn't download or doesn't match any more (the server changed its
+    /// pack) is left out with a warning instead of stopping the release: players then get it
+    /// from the server when they join, the way they would without the pack.
+    fn server_packs(&self) -> Vec<ServerPack> {
+        let mut packs = Vec::new();
+        for entry in &self.pack.server_packs {
+            let pack = ServerPack {
+                server: entry.server.clone(),
+                id: entry.id.trim().to_ascii_lowercase(),
+                url: entry.url.trim().to_string(),
+                sha1: entry.sha1.trim().to_ascii_lowercase(),
+                size: entry.size,
+            };
+            match self.check_server_pack(&pack) {
+                Ok(()) => packs.push(pack),
+                Err(e) => println!(
+                    "  warning: leaving out {}'s resource pack ({e}). Join the server once and copy the new entry from instance/downloads/log.json into pack.toml.",
+                    entry.server
+                ),
+            }
+        }
+        packs
+    }
+
+    fn check_server_pack(&self, pack: &ServerPack) -> Result<()> {
+        if pack.sha1.len() != 40 {
+            return Err("its sha1 isn't a SHA-1 hash".into());
+        }
+        let cached = self.cache.join("server-packs").join(&pack.sha1);
+        if let Ok(bytes) = fs::read(&cached) {
+            if bytes.len() as u64 == pack.size && sha1_hex(&bytes) == pack.sha1 {
+                return Ok(());
+            }
+        }
+        let bytes = self.modrinth.download(&pack.url)?;
+        let (size, sha1) = (bytes.len() as u64, sha1_hex(&bytes));
+        if size != pack.size || sha1 != pack.sha1 {
+            return Err(format!("the file there now is {size} bytes with SHA-1 {sha1}").into());
+        }
+        fs::create_dir_all(cached.parent().expect("cache paths have a parent"))?;
+        write_atomic(&cached, &bytes)?;
+        Ok(())
+    }
 }
 
 struct Job {
@@ -738,6 +786,10 @@ fn asset_name(name: &str) -> String {
 
 fn sha512_hex(bytes: &[u8]) -> String {
     cuc_manifest::encode_hex(&Sha512::digest(bytes))
+}
+
+fn sha1_hex(bytes: &[u8]) -> String {
+    cuc_manifest::encode_hex(&Sha1::digest(bytes))
 }
 
 /// Whether two manifests install exactly the same thing (ignoring serial, dates, notes and

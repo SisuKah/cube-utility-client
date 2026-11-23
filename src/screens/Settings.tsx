@@ -16,6 +16,11 @@ interface Props {
 }
 
 const TOGGLES = [
+  {
+    key: 'backgroundStart',
+    name: 'Get Minecraft ready in the background',
+    description: 'It loads while the launcher is open, so PLAY opens it straight away. Uses about 2.5 GB of memory while it waits.'
+  },
   { key: 'hideWhilePlaying', name: 'Hide launcher while playing', description: 'It comes back when you close the game.' },
   { key: 'betaUpdates', name: 'Beta updates', description: 'Get new versions of the mods a little earlier. They may have bugs.' }
 ] as const

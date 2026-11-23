@@ -659,6 +659,8 @@ pub async fn modrinth_remove(app: AppHandle, project_id: String) -> Result<()> {
     if launcher.is_playing() {
         return Err(Error::Message("Close Minecraft first, then remove it.".into()));
     }
+    // A game waiting in the background holds the jar open.
+    crate::launcher::background::stop(&app, "a mod is being removed").await;
     let paths = launcher.paths().clone();
     let removed = remove(&paths, &project_id).await?;
     launcher.note_extras(&app, &[], &removed);
@@ -745,6 +747,7 @@ mod tests {
                 })
                 .collect(),
             configs: vec![],
+            server_packs: vec![],
         }
     }
 

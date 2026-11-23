@@ -7,7 +7,8 @@
   "icon": "assets/cubeutilityclient/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.cubeutilityclient.CubeUtilityClient"],
+    "preLaunch": ["dev.cubeutilityclient.background.LauncherLink"],
+    "client": ["dev.cubeutilityclient.CubeUtilityClient", "dev.cubeutilityclient.background.BackgroundStart"],
     "modmenu": ["dev.cubeutilityclient.compat.ModMenuEntry"]
   },
   "mixins": [
